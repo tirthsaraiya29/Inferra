@@ -104,7 +104,7 @@ fun InferraNavHost(
                 arguments = listOf(navArgument("modelId") { type = NavType.StringType })
             ) { backStack ->
                 val rawModelId = backStack.arguments?.getString("modelId") ?: ""
-                val modelId = try { URLDecoder.decode(rawModelId, "UTF-8") } catch (e: Exception) { rawModelId }
+                val modelId = try { URLDecoder.decode(rawModelId, "UTF-8") } catch (_: Exception) { rawModelId }
 
                 val detailViewModel = remember(modelId) {
                     ModelDetailViewModel(modelId, modelRepository, hardwareRepository, downloadRepository, companionRepository)
@@ -155,10 +155,13 @@ fun InferraNavHost(
             GlassBottomBar(
                 currentRoute = currentRoute?.split("?")?.get(0),
                 onNavigate = { route ->
-                    navController.navigate(route) {
-                        popUpTo(Screen.Discovery.route) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
+                    val cleanCurrent = currentRoute?.split("?")?.get(0)
+                    if (cleanCurrent != route) {
+                        navController.navigate(route) {
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
                 },
                 modifier = Modifier.align(Alignment.BottomCenter)

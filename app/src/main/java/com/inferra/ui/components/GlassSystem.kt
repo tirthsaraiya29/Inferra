@@ -58,13 +58,11 @@ fun LiquidGlassBackground(
             .fillMaxSize()
             .background(ObsidianBg)
     ) {
-        // Ambient Cyber Glow Orbs in background
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .drawWithContent {
                     drawContent()
-                    // Cyan top-left ambient orb
                     drawCircle(
                         brush = Brush.radialGradient(
                             colors = listOf(CyberCyan.copy(alpha = 0.18f), Color.Transparent),
@@ -73,7 +71,6 @@ fun LiquidGlassBackground(
                         radius = size.width * 0.7f,
                         center = Offset(0f, 0f)
                     )
-                    // Violet bottom-right ambient orb
                     drawCircle(
                         brush = Brush.radialGradient(
                             colors = listOf(CyberViolet.copy(alpha = 0.14f), Color.Transparent),
@@ -115,13 +112,17 @@ fun GlassCard(
             .clip(shape)
             .graphicsLayer {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && blurRadiusDp > 0f) {
-                    renderEffect = RenderEffect
-                        .createBlurEffect(
-                            blurRadiusDp,
-                            blurRadiusDp,
-                            Shader.TileMode.MIRROR
-                        )
-                        .asComposeRenderEffect()
+                    try {
+                        renderEffect = RenderEffect
+                            .createBlurEffect(
+                                blurRadiusDp,
+                                blurRadiusDp,
+                                Shader.TileMode.MIRROR
+                            )
+                            .asComposeRenderEffect()
+                    } catch (_: Throwable) {
+                        // Safe fallback for devices/emulators without GPU RenderEffect support
+                    }
                 }
             }
             .background(currentFill)

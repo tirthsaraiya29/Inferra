@@ -11,9 +11,9 @@ import com.inferra.domain.model.HardwareProfile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import java.util.Locale
 
 class HardwareRepository(
     private val context: Context,
@@ -41,26 +41,45 @@ class HardwareRepository(
     }
 
     fun detectLocalAndroidHardware(): HardwareProfile {
-        val actManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        val memInfo = ActivityManager.MemoryInfo()
-        actManager.getMemoryInfo(memInfo)
+        return try {
+            val actManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+            val memInfo = ActivityManager.MemoryInfo()
+            actManager?.getMemoryInfo(memInfo)
 
-        val totalRamGb = (memInfo.totalMem / (1024f * 1024f * 1024f))
-        val deviceModel = "${Build.MANUFACTURER.replaceFirstChar { it.uppercase() }} ${Build.MODEL}"
+            val totalRamGb = if (memInfo.totalMem > 0) (memInfo.totalMem / (1024f * 1024f * 1024f)) else 8.0f
+            val mfrRaw = Build.MANUFACTURER ?: "Android"
+            val mfr = if (mfrRaw.isNotEmpty()) mfrRaw.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.US) else it.toString() } else "Android"
+            val model = Build.MODEL ?: "Device"
+            val deviceModel = "$mfr $model"
 
-        return HardwareProfile(
-            id = "profile-local-detected",
-            name = "$deviceModel (Active Device)",
-            deviceType = DeviceType.LOCAL_ANDROID,
-            cpuName = Build.HARDWARE,
-            gpuName = "Adreno / Mali GPU",
-            vramGb = (totalRamGb * 0.35f).coerceAtMost(6.0f),
-            ramGb = totalRamGb,
-            osName = "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})",
-            preferredRuntime = "llama.cpp (Vulkan)",
-            availableStorageGb = 64f,
-            isLocalDevice = true
-        )
+            HardwareProfile(
+                id = "profile-local-detected",
+                name = "$deviceModel (Active Device)",
+                deviceType = DeviceType.LOCAL_ANDROID,
+                cpuName = Build.HARDWARE ?: "ARM64 CPU",
+                gpuName = "Adreno / Mali GPU",
+                vramGb = (totalRamGb * 0.35f).coerceAtMost(6.0f),
+                ramGb = totalRamGb,
+                osName = "Android ${Build.VERSION.RELEASE ?: "15"} (API ${Build.VERSION.SDK_INT})",
+                preferredRuntime = "llama.cpp (Vulkan)",
+                availableStorageGb = 64f,
+                isLocalDevice = true
+            )
+        } catch (_: Exception) {
+            HardwareProfile(
+                id = "profile-local-fallback",
+                name = "Android Device",
+                deviceType = DeviceType.LOCAL_ANDROID,
+                cpuName = "ARM64 CPU",
+                gpuName = "Adreno / Mali GPU",
+                vramGb = 3.0f,
+                ramGb = 8.0f,
+                osName = "Android 15",
+                preferredRuntime = "llama.cpp (Vulkan)",
+                availableStorageGb = 64f,
+                isLocalDevice = true
+            )
+        }
     }
 
     private fun HardwareProfileEntity.toDomain() = HardwareProfile(
