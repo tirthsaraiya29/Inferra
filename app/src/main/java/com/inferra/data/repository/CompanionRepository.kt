@@ -2,7 +2,6 @@ package com.inferra.data.repository
 
 import com.inferra.data.local.DeviceTargetDao
 import com.inferra.data.local.DeviceTargetEntity
-import com.inferra.data.local.SeedData
 import com.inferra.domain.model.DeviceTarget
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -13,11 +12,7 @@ class CompanionRepository(
     private val deviceTargetDao: DeviceTargetDao
 ) {
     val devicesFlow: Flow<List<DeviceTarget>> = deviceTargetDao.getAllDevices().map { entities ->
-        if (entities.isEmpty()) {
-            SeedData.initialDeviceTargets
-        } else {
-            entities.map { it.toDomain() }
-        }
+        entities.map { it.toDomain() }
     }
 
     suspend fun pairNewDevice(
@@ -30,7 +25,7 @@ class CompanionRepository(
             name = name,
             ipAddress = ipAddress,
             port = port,
-            osName = "Windows / Linux / macOS Companion",
+            osName = "Companion Device",
             isOnline = true,
             lastSeenEpochMs = System.currentTimeMillis(),
             isPaired = true,

@@ -2,7 +2,6 @@ package com.inferra.data.repository
 
 import com.inferra.data.local.DownloadJobDao
 import com.inferra.data.local.DownloadJobEntity
-import com.inferra.data.local.SeedData
 import com.inferra.domain.model.AiModel
 import com.inferra.domain.model.DeviceTarget
 import com.inferra.domain.model.DownloadJob
@@ -22,11 +21,7 @@ class DownloadRepository(
     private val json = Json { ignoreUnknownKeys = true }
 
     val jobsFlow: Flow<List<DownloadJob>> = downloadJobDao.getAllJobs().map { entities ->
-        if (entities.isEmpty()) {
-            SeedData.initialDownloadJobs
-        } else {
-            entities.map { it.toDomain() }
-        }
+        entities.map { it.toDomain() }
     }
 
     suspend fun createSendToPcJob(
