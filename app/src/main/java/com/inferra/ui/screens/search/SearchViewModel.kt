@@ -25,7 +25,8 @@ data class SearchUiState(
     val maxParamsBillion: Float? = null,
     val isGgufOnly: Boolean = false,
     val activeHardwareProfile: HardwareProfile? = null,
-    val compatibilityMap: Map<String, HardwareCompatibilityResult> = emptyMap()
+    val compatibilityMap: Map<String, HardwareCompatibilityResult> = emptyMap(),
+    val errorMessage: String? = null
 )
 
 class SearchViewModel(
@@ -80,26 +81,40 @@ class SearchViewModel(
 
     private fun performSearch() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            val state = _uiState.value
-            val results = modelRepository.searchModels(
-                query = state.query,
-                selectedTask = state.selectedTask,
-                maxParams = state.maxParamsBillion,
-                isGgufOnly = state.isGgufOnly
-            )
-
-            val profile = state.activeHardwareProfile ?: hardwareRepository.getActiveProfile()
-            val compMap = results.associate { model ->
-                model.id to HardwareFitCalculator.calculate(model, model.quantizations.firstOrNull(), profile)
-            }
-
-            _uiState.update {
-                it.copy(
-                    isLoading = false,
-                    searchResults = results,
-                    compatibilityMap = compMap
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            try {
+                val state = _uiState.value
+                val results = modelRepository.searchModels(
+                    query = state.query,
+                    selectedTask = state.selectedTask,
+                    maxParams = state.maxParamsBillion,
+                    isGgufOnly = state.isGgufOnly
                 )
+
+                val profile = state.activeHardwareProfile ?: hardwareRepository.getActiveProfile()
+                val compMap = if (profile != null) {
+                    results.associate { model ->
+                        model.id to HardwareFitCalculator.calculate(model, model.quantizations.firstOrNull(), profile)
+                    }
+                } else {
+                    emptyMap()
+                }
+
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        searchResults = results,
+                        compatibilityMap = compMap
+                    )
+                }
+            } catch (_: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        searchResults = emptyList(),
+                        errorMessage = "Unable to search Hugging Face. Please check your network connection."
+                    )
+                }
             }
         }
     }
