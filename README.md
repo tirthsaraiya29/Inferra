@@ -58,7 +58,7 @@ app
 
 ```bash
 # Clone repository
-git clone https://github.com/Tirth-PC/Inferra.git
+git clone https://github.com/tirthsaraiya29/Inferra.git
 cd Inferra
 
 # Build Debug APK
