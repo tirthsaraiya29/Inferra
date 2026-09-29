@@ -82,33 +82,46 @@ class ModelDetailViewModel(
         _uiState.update { it.copy(sendToPcSuccessMessage = null) }
     }
 
+    fun retry() {
+        loadModelDetail()
+    }
+
     private fun loadModelDetail() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            val model = modelRepository.getModelById(modelId)
-            val profile = hardwareRepository.getActiveProfile()
-            val watchlisted = modelRepository.isWatchlisted(modelId).first()
-            val companions = companionRepository.devicesFlow.first()
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            try {
+                val model = modelRepository.getModelById(modelId)
+                val profile = hardwareRepository.getActiveProfile()
+                val watchlisted = modelRepository.isWatchlisted(modelId).first()
+                val companions = companionRepository.devicesFlow.first()
 
-            if (model != null) {
-                val primaryQuant = model.quantizations.firstOrNull()
-                val comp = HardwareFitCalculator.calculate(model, primaryQuant, profile)
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        model = model,
-                        activeHardwareProfile = profile,
-                        selectedQuantization = primaryQuant,
-                        compatibilityResult = comp,
-                        isWatchlisted = watchlisted,
-                        companionDevices = companions
-                    )
+                if (model != null) {
+                    val primaryQuant = model.quantizations.firstOrNull()
+                    val comp = HardwareFitCalculator.calculate(model, primaryQuant, profile)
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            model = model,
+                            activeHardwareProfile = profile,
+                            selectedQuantization = primaryQuant,
+                            compatibilityResult = comp,
+                            isWatchlisted = watchlisted,
+                            companionDevices = companions
+                        )
+                    }
+                } else {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = "Model '$modelId' could not be found on Hugging Face."
+                        )
+                    }
                 }
-            } else {
+            } catch (_: Exception) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = "Model not found."
+                        errorMessage = "Unable to load model detail from Hugging Face. Please check your network connection."
                     )
                 }
             }

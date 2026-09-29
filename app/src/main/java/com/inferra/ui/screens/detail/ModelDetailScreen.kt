@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
@@ -74,8 +75,32 @@ fun ModelDetailScreen(
                 CircularProgressIndicator(color = AccentAzure, strokeWidth = 2.dp)
             }
         } else if (state.model == null) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(text = state.errorMessage ?: "Model not found.", color = TextSecondary)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(32.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Unable to load model detail",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextPrimary,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = state.errorMessage ?: "Model details could not be retrieved from Hugging Face.",
+                        fontSize = 13.sp,
+                        color = TextMuted,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+                    GlassButton(onClick = { viewModel.retry() }) {
+                        Text(text = "Retry", fontSize = 14.sp)
+                    }
+                }
             }
         } else {
             val model = state.model!!
@@ -227,17 +252,17 @@ fun ModelDetailScreen(
                         ) {
                             SpecBox(
                                 title = "PARAMETERS",
-                                value = if (model.isMoe) "${String.format(Locale.US, "%.1f", model.totalParamsBillion)}B MoE" else "${String.format(Locale.US, "%.1f", model.totalParamsBillion)}B",
+                                value = if (model.totalParamsBillion <= 0f) "Not specified" else if (model.isMoe) "${String.format(Locale.US, "%.1f", model.totalParamsBillion)}B MoE" else "${String.format(Locale.US, "%.1f", model.totalParamsBillion)}B",
                                 modifier = Modifier.weight(1f)
                             )
                             SpecBox(
                                 title = "CONTEXT",
-                                value = "${model.contextLengthTokens / 1024}K tokens",
+                                value = if (model.contextLengthTokens <= 0) "Not specified" else "${model.contextLengthTokens / 1024}K tokens",
                                 modifier = Modifier.weight(1f)
                             )
                             SpecBox(
                                 title = "ARCHITECTURE",
-                                value = model.architecture.take(12),
+                                value = model.architecture.ifBlank { "Unknown" }.take(12),
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -340,7 +365,7 @@ fun ModelDetailScreen(
                                             }
                                             Spacer(modifier = Modifier.height(4.dp))
                                             Text(
-                                                text = "${formatBytes(quant.fileSizeBytes)} • ~${quant.estimatedRamMb / 1024}GB RAM required",
+                                                text = if (quant.fileSizeBytes > 0L) "${formatBytes(quant.fileSizeBytes)} • ~${quant.estimatedRamMb / 1024}GB RAM required" else "File: ${quant.fileName}",
                                                 fontSize = 12.sp,
                                                 color = TextSecondary
                                             )

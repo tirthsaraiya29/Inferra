@@ -63,6 +63,10 @@ class SearchViewModel(
         performSearch()
     }
 
+    fun retry() {
+        performSearch()
+    }
+
     private fun triggerSearchDebounced() {
         searchJob?.cancel()
         searchJob = viewModelScope.launch {

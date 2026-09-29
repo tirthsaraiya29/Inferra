@@ -1,6 +1,5 @@
 package com.inferra.ui.screens.search
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,9 +27,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.inferra.domain.model.ModelTask
+import com.inferra.ui.components.GlassButton
 import com.inferra.ui.components.GlassChip
 import com.inferra.ui.components.GlassTextField
 import com.inferra.ui.components.LiquidGlassBackground
@@ -159,7 +160,35 @@ fun SearchScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Results List
-            if (state.searchResults.isEmpty() && !state.isLoading) {
+            if (state.errorMessage != null && !state.isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(30.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "Unable to connect to Hugging Face",
+                            color = TextPrimary,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = state.errorMessage ?: "Please check your network connection.",
+                            color = TextMuted,
+                            fontSize = 13.sp,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        GlassButton(onClick = { viewModel.retry() }) {
+                            Text(text = "Retry", fontSize = 14.sp)
+                        }
+                    }
+                }
+            } else if (state.searchResults.isEmpty() && !state.isLoading) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
