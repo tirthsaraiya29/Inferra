@@ -5,7 +5,6 @@ import android.content.Context
 import android.os.Build
 import com.inferra.data.local.HardwareProfileDao
 import com.inferra.data.local.HardwareProfileEntity
-import com.inferra.data.local.SeedData
 import com.inferra.domain.model.DeviceType
 import com.inferra.domain.model.HardwareProfile
 import kotlinx.coroutines.Dispatchers
@@ -20,16 +19,12 @@ class HardwareRepository(
     private val profileDao: HardwareProfileDao
 ) {
     val profilesFlow: Flow<List<HardwareProfile>> = profileDao.getAllProfiles().map { entities ->
-        if (entities.isEmpty()) {
-            SeedData.initialHardwareProfiles
-        } else {
-            entities.map { it.toDomain() }
-        }
+        entities.map { it.toDomain() }
     }
 
-    suspend fun getActiveProfile(): HardwareProfile = withContext(Dispatchers.IO) {
+    suspend fun getActiveProfile(): HardwareProfile? = withContext(Dispatchers.IO) {
         val all = profilesFlow.first()
-        all.find { !it.isLocalDevice } ?: all.firstOrNull() ?: detectLocalAndroidHardware()
+        all.firstOrNull()
     }
 
     suspend fun addCustomProfile(profile: HardwareProfile) = withContext(Dispatchers.IO) {
@@ -54,11 +49,11 @@ class HardwareRepository(
 
             HardwareProfile(
                 id = "profile-local-detected",
-                name = "$deviceModel (Active Device)",
+                name = deviceModel,
                 deviceType = DeviceType.LOCAL_ANDROID,
                 cpuName = Build.HARDWARE ?: "ARM64 CPU",
-                gpuName = "Adreno / Mali GPU",
-                vramGb = (totalRamGb * 0.35f).coerceAtMost(6.0f),
+                gpuName = "Mobile GPU",
+                vramGb = 0f,
                 ramGb = totalRamGb,
                 osName = "Android ${Build.VERSION.RELEASE ?: "15"} (API ${Build.VERSION.SDK_INT})",
                 preferredRuntime = "llama.cpp (Vulkan)",
@@ -71,8 +66,8 @@ class HardwareRepository(
                 name = "Android Device",
                 deviceType = DeviceType.LOCAL_ANDROID,
                 cpuName = "ARM64 CPU",
-                gpuName = "Adreno / Mali GPU",
-                vramGb = 3.0f,
+                gpuName = "Mobile GPU",
+                vramGb = 0f,
                 ramGb = 8.0f,
                 osName = "Android 15",
                 preferredRuntime = "llama.cpp (Vulkan)",

@@ -26,10 +26,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.inferra.domain.model.AiModel
 import com.inferra.domain.model.HardwareCompatibilityResult
+import com.inferra.ui.components.GlassButton
+import com.inferra.ui.components.GlassCard
 import com.inferra.ui.components.GlassChip
 import com.inferra.ui.components.GlassTextField
 import com.inferra.ui.components.LiquidGlassBackground
@@ -62,6 +65,34 @@ fun DiscoveryScreen(
                         color = TextSecondary,
                         fontSize = 14.sp
                     )
+                }
+            }
+        } else if (state.errorMessage != null && state.spotlightModel == null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(32.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Unable to load models from Hugging Face",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextPrimary,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = state.errorMessage ?: "Please check your network connection and try again.",
+                        fontSize = 13.sp,
+                        color = TextMuted,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+                    GlassButton(onClick = { viewModel.refresh() }) {
+                        Text(text = "Retry", fontSize = 14.sp)
+                    }
                 }
             }
         } else {

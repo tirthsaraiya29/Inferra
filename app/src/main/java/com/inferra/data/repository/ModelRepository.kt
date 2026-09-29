@@ -1,8 +1,8 @@
 package com.inferra.data.repository
 
+import android.util.Log
 import com.inferra.data.local.ModelDao
 import com.inferra.data.local.ModelEntity
-import com.inferra.data.local.SeedData
 import com.inferra.data.local.WatchlistDao
 import com.inferra.data.local.WatchlistEntity
 import com.inferra.data.network.HuggingFaceApi
@@ -24,31 +24,42 @@ class ModelRepository(
     private val modelDao: ModelDao,
     private val watchlistDao: WatchlistDao
 ) {
+    private companion object {
+        const val TAG = "HuggingFaceApi"
+    }
 
     suspend fun getModels(forceRefresh: Boolean = false): List<AiModel> = withContext(Dispatchers.IO) {
         val localEntities = modelDao.getAllModels().first()
         if (localEntities.isNotEmpty() && !forceRefresh) {
+            Log.d(TAG, "Returning ${localEntities.size} models from local database cache")
             return@withContext localEntities.map { parseEntity(it) }
         }
 
-        // Try network fetch from HuggingFace API
-        if (api != null) {
-            try {
-                val dtos = api.getModels(limit = 40, sort = "downloads")
-                val domainModels = dtos.map { NetworkToDomainMapper.mapToDomain(it) }
-                if (domainModels.isNotEmpty()) {
-                    saveToLocalDb(domainModels)
-                    return@withContext domainModels
-                }
-            } catch (_: Exception) {
-                // Network unavailable -> Fallback
-            }
+        if (api == null) {
+            Log.e(TAG, "HuggingFaceApi instance is null. Cannot fetch models.")
+            throw IllegalStateException("Network client not configured")
         }
 
-        // Fallback seed models
-        val seed = SeedData.seedModels
-        saveToLocalDb(seed)
-        seed
+        Log.d(TAG, "Dispatching live getModels() request to Hugging Face API...")
+        try {
+            val dtos = api.getModels(limit = 40, sort = "downloads")
+            Log.d(TAG, "Received ${dtos.size} model DTOs from Hugging Face API")
+            val domainModels = dtos.map { NetworkToDomainMapper.mapToDomain(it) }
+            if (domainModels.isNotEmpty()) {
+                saveToLocalDb(domainModels)
+                Log.d(TAG, "Saved ${domainModels.size} live models to database cache")
+                return@withContext domainModels
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to fetch live models from Hugging Face API: ${e.localizedMessage}", e)
+            if (localEntities.isNotEmpty()) {
+                Log.d(TAG, "Falling back to ${localEntities.size} cached local database models")
+                return@withContext localEntities.map { parseEntity(it) }
+            }
+            throw e
+        }
+
+        emptyList()
     }
 
     suspend fun getModelById(id: String): AiModel? = withContext(Dispatchers.IO) {
@@ -60,16 +71,18 @@ class ModelRepository(
         if (api != null && id.contains("/")) {
             try {
                 val parts = id.split("/", limit = 2)
+                Log.d(TAG, "Fetching live detail for model '${parts[0]}/${parts[1]}' from Hugging Face...")
                 val dto = api.getModelDetail(author = parts[0], modelName = parts[1])
                 val domainModel = NetworkToDomainMapper.mapToDomain(dto)
                 saveToLocalDb(listOf(domainModel))
                 return@withContext domainModel
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to fetch model detail for '$id': ${e.localizedMessage}")
             }
         }
 
-        val all = getModels()
-        all.find { it.id == id || it.name.equals(id, ignoreCase = true) }
+        val localEntities = modelDao.getAllModels().first()
+        localEntities.map { parseEntity(it) }.find { it.id == id || it.name.equals(id, ignoreCase = true) }
     }
 
     suspend fun searchModels(
@@ -83,14 +96,18 @@ class ModelRepository(
 
         if (api != null && query.isNotBlank()) {
             try {
+                Log.d(TAG, "Dispatching live search query '$query' to Hugging Face API...")
                 val dtos = api.getModels(search = query, limit = 30, sort = "downloads")
+                Log.d(TAG, "Live search for '$query' returned ${dtos.size} DTOs from Hugging Face")
                 baseModels = dtos.map { NetworkToDomainMapper.mapToDomain(it) }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.e(TAG, "Live search for '$query' failed: ${e.localizedMessage}")
             }
         }
 
         if (baseModels.isEmpty()) {
-            baseModels = getModels()
+            val localEntities = modelDao.getAllModels().first()
+            baseModels = localEntities.map { parseEntity(it) }
         }
 
         baseModels.filter { model ->
@@ -158,9 +175,6 @@ class ModelRepository(
     }
 
     private fun parseEntity(entity: ModelEntity): AiModel {
-        val seedMatch = SeedData.seedModels.find { it.id == entity.id }
-        if (seedMatch != null) return seedMatch
-
         return AiModel(
             id = entity.id,
             name = entity.name,

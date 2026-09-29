@@ -51,20 +51,25 @@ class DiscoveryViewModel(
                 val profile = hardwareRepository.getActiveProfile()
                 val models = modelRepository.getModels(forceRefresh = forceRefresh)
 
-                // Calculate hardware compatibility for all models against active profile
-                val compMap = models.associate { model ->
-                    val primaryQuant = model.quantizations.firstOrNull()
-                    model.id to HardwareFitCalculator.calculate(model, primaryQuant, profile)
+                val compMap = if (profile != null) {
+                    models.associate { model ->
+                        val primaryQuant = model.quantizations.firstOrNull()
+                        model.id to HardwareFitCalculator.calculate(model, primaryQuant, profile)
+                    }
+                } else {
+                    emptyMap()
                 }
 
                 val spotlight = models.find { it.isFeatured } ?: models.firstOrNull()
                 val trending = models.filter { it.isTrending }
                 val newReleases = models.filter { it.isNew }
                 val popular = models.sortedByDescending { it.downloadsCount }
-                val forYou = models.filter { model ->
-                    val comp = compMap[model.id]
-                    comp?.fitGrade == FitGrade.EXCELLENT || comp?.fitGrade == FitGrade.BORDERLINE
-                }
+                val forYou = if (profile != null) {
+                    models.filter { model ->
+                        val comp = compMap[model.id]
+                        comp?.fitGrade == FitGrade.EXCELLENT || comp?.fitGrade == FitGrade.BORDERLINE
+                    }
+                } else emptyList()
 
                 _uiState.update {
                     it.copy(
@@ -75,14 +80,20 @@ class DiscoveryViewModel(
                         forYouModels = forYou,
                         newModels = newReleases,
                         popularModels = popular,
-                        compatibilityMap = compMap
+                        compatibilityMap = compMap,
+                        errorMessage = if (models.isEmpty()) "Unable to load models from Hugging Face." else null
                     )
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = "Failed to load model intelligence: ${e.localizedMessage}"
+                        errorMessage = "Unable to load models from Hugging Face. Please check your connection.",
+                        spotlightModel = null,
+                        trendingModels = emptyList(),
+                        forYouModels = emptyList(),
+                        newModels = emptyList(),
+                        popularModels = emptyList()
                     )
                 }
             }
