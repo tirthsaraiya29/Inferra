@@ -16,9 +16,11 @@ data class HuggingFaceModelDto(
     @SerialName("disabled") val isDisabled: Boolean? = false,
     @SerialName("gated") val gated: JsonElement? = null,      // JsonElement accepts boolean, string ("auto"/"manual"), or null
     @SerialName("pipeline_tag") val pipelineTag: String? = null,
+    @SerialName("library_name") val libraryName: String? = null,
     @SerialName("tags") val tags: List<String>? = emptyList(),
     @SerialName("siblings") val siblings: List<HfSiblingDto>? = emptyList(),
-    @SerialName("config") val config: HfConfigDto? = null
+    @SerialName("config") val config: HfConfigDto? = null,
+    @SerialName("cardData") val cardData: HfCardDataDto? = null
 )
 
 @Serializable
@@ -32,5 +34,13 @@ data class HfConfigDto(
     @SerialName("model_type") val modelType: String? = null,
     @SerialName("num_hidden_layers") val numLayers: Int? = null,
     @SerialName("max_position_embeddings") val maxPositionEmbeddings: JsonElement? = null, // Accepts int, string, or null
-    @SerialName("vocab_size") val vocabSize: Int? = null
+    @SerialName("vocab_size") val vocabSize: Int? = null,
+    @SerialName("hidden_size") val hiddenSize: Int? = null,
+    @SerialName("intermediate_size") val intermediateSize: Int? = null
+)
+
+@Serializable
+data class HfCardDataDto(
+    @SerialName("license") val license: JsonElement? = null,
+    @SerialName("language") val language: JsonElement? = null
 )

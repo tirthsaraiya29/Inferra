@@ -9,15 +9,21 @@ interface HuggingFaceApi {
     @GET("api/models")
     suspend fun getModels(
         @Query("search") search: String? = null,
+        @Query("pipeline_tag") pipelineTag: String? = null,
+        @Query("filter") filter: String? = null,
         @Query("sort") sort: String? = "downloads",
         @Query("direction") direction: Int? = -1,
-        @Query("limit") limit: Int = 30,
-        @Query("filter") filter: String? = null
+        @Query("limit") limit: Int? = 30,
+        @Query("p") page: Int? = null,
+        @Query("full") full: Boolean? = true,
+        @Query("expand") expand: List<String>? = listOf(
+            "downloads", "likes", "pipeline_tag", "tags",
+            "lastModified", "createdAt", "config", "siblings", "cardData"
+        )
     ): List<HuggingFaceModelDto>
 
-    @GET("api/models/{author}/{modelName}")
+    @GET("api/models/{id}")
     suspend fun getModelDetail(
-        @Path("author") author: String,
-        @Path("modelName") modelName: String
+        @Path(value = "id", encoded = true) id: String
     ): HuggingFaceModelDto
 }

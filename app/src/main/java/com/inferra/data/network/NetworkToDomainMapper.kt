@@ -16,34 +16,36 @@ object NetworkToDomainMapper {
     fun mapToDomain(dto: HuggingFaceModelDto): AiModel {
         val fullId = dto.id
         val parts = fullId.split("/")
-        val authorStr = dto.author ?: parts.getOrNull(0) ?: "Community"
-        val modelNameStr = parts.getOrNull(1) ?: fullId
+        val authorStr = dto.author ?: if (parts.size > 1) parts[0] else "Community"
+        val modelNameStr = if (parts.size > 1) parts[1] else fullId
 
-        val (totalParams, activeParams, isMoe) = extractParams(modelNameStr)
-        
-        val contextLen = try {
-            dto.config?.maxPositionEmbeddings?.jsonPrimitive?.intOrNull
-                ?: dto.config?.maxPositionEmbeddings?.jsonPrimitive?.content?.toIntOrNull()
-        } catch (_: Exception) { null }
-            ?: extractContextFromName(modelNameStr) 
-            ?: 32768
+        val (totalParams, activeParams, isMoe) = extractParams(modelNameStr, dto.tags, dto.config)
+        val contextLen = extractContextLength(dto, modelNameStr)
 
         val modalities = extractModalities(dto.pipelineTag, dto.tags)
         val tasks = extractTasks(dto.pipelineTag, modelNameStr, dto.tags)
 
-        val (licenseType, licenseName) = extractLicense(dto.tags)
-
-        val quantizations = extractQuantizations(dto.siblings, totalParams)
+        val (licenseType, licenseName) = extractLicense(dto.tags, dto.cardData)
+        val quantizations = extractQuantizations(fullId, dto.siblings, totalParams)
 
         val downloads = dto.downloads ?: 0L
         val likes = dto.likes ?: 0L
+
+        val descriptionText = buildDescription(
+            author = authorStr,
+            pipelineTag = dto.pipelineTag,
+            totalParamsBillion = totalParams,
+            contextLenTokens = contextLen,
+            downloads = downloads,
+            likes = likes
+        )
 
         return AiModel(
             id = fullId,
             name = modelNameStr,
             author = authorStr,
-            description = "Open-weight model with ${String.format(Locale.US, "%.1f", totalParams)}B parameters and ${contextLen / 1024}K context window.",
-            architecture = dto.config?.architectures?.firstOrNull() ?: if (isMoe) "Mixture-of-Experts" else "Transformer",
+            description = descriptionText,
+            architecture = dto.config?.architectures?.firstOrNull() ?: dto.config?.modelType ?: dto.libraryName ?: "Transformer",
             totalParamsBillion = totalParams,
             activeParamsBillion = activeParams,
             isMoe = isMoe,
@@ -56,21 +58,21 @@ object NetworkToDomainMapper {
             likesCount = likes,
             updatedAt = dto.lastModified?.take(10) ?: "Recently",
             quantizations = quantizations,
-            benchmarks = emptyList(), // Rule #3: No fake benchmark generator. Real API returns empty if unverified.
+            benchmarks = emptyList(), // Real API returns empty if benchmark unverified; no fabricated benchmark generator
             capabilities = CapabilityMatrix(
                 coding = if (tasks.contains(ModelTask.CODING)) 85f else 50f,
-                reasoning = 80f,
-                math = 75f,
+                reasoning = if (tasks.contains(ModelTask.REASONING)) 85f else 60f,
+                math = if (tasks.contains(ModelTask.MATH)) 85f else 50f,
                 vision = if (modalities.contains(Modality.VISION)) 85f else 0f,
-                agentic = 75f,
-                toolCalling = 80f,
+                agentic = if (tasks.contains(ModelTask.AGENTIC)) 80f else 50f,
+                toolCalling = if (tasks.contains(ModelTask.TOOL_CALLING)) 80f else 50f,
                 multilingual = 70f,
-                longContext = 85f
+                longContext = if (contextLen >= 32768) 85f else 50f
             ),
             lineage = LineageInfo(
-                baseModelId = if (modelNameStr.contains("Instruct", true) || modelNameStr.contains("Chat", true)) fullId.replace("-Instruct", "").replace("-Chat", "") else null
+                baseModelId = extractBaseModelId(dto.tags, modelNameStr, fullId)
             ),
-            isFeatured = (downloads > 500000) || (likes > 2000),
+            isFeatured = downloads > 500000 || likes > 2000,
             isTrending = likes > 500,
             isNew = dto.createdAt?.contains("2025") == true || dto.createdAt?.contains("2026") == true,
             repoUrl = "https://huggingface.co/$fullId",
@@ -78,10 +80,14 @@ object NetworkToDomainMapper {
         )
     }
 
-    private fun extractParams(name: String): Triple<Float, Float, Boolean> {
+    private fun extractParams(
+        name: String,
+        tags: List<String>?,
+        config: HfConfigDto?
+    ): Triple<Float, Float, Boolean> {
         val lower = name.lowercase(Locale.US)
-        
-        val moeMatch = Regex("(\\d+)x(\\d+)b").find(lower)
+
+        val moeMatch = Regex("(\\d+)x(\\d+\\.?\\d*)b").find(lower)
         if (moeMatch != null) {
             val numExperts = moeMatch.groupValues[1].toFloatOrNull() ?: 8f
             val expertSize = moeMatch.groupValues[2].toFloatOrNull() ?: 7f
@@ -92,14 +98,44 @@ object NetworkToDomainMapper {
 
         val paramMatch = Regex("(\\d+\\.?\\d*)b").find(lower)
         if (paramMatch != null) {
-            val p = paramMatch.groupValues[1].toFloatOrNull() ?: 7f
-            return Triple(p, p, false)
+            val p = paramMatch.groupValues[1].toFloatOrNull() ?: 0f
+            if (p > 0f) {
+                return Triple(p, p, false)
+            }
         }
 
-        return Triple(7.0f, 7.0f, false)
+        tags?.forEach { tag ->
+            val tagLower = tag.lowercase(Locale.US)
+            val tagMatch = Regex("^(\\d+\\.?\\d*)b$").find(tagLower)
+            if (tagMatch != null) {
+                val p = tagMatch.groupValues[1].toFloatOrNull() ?: 0f
+                if (p > 0f) return Triple(p, p, false)
+            }
+        }
+
+        if (config != null) {
+            val layers = config.numLayers
+            val hidden = config.hiddenSize
+            val inter = config.intermediateSize
+            if (layers != null && hidden != null && inter != null && layers > 0 && hidden > 0) {
+                val estParams = (layers * (12.0 * hidden * hidden + 2.0 * hidden * inter) / 1e9).toFloat()
+                if (estParams > 0.1f) {
+                    val rounded = (estParams * 10).toInt() / 10f
+                    return Triple(rounded, rounded, false)
+                }
+            }
+        }
+
+        return Triple(0f, 0f, false)
     }
 
-    private fun extractContextFromName(name: String): Int? {
+    private fun extractContextLength(dto: HuggingFaceModelDto, name: String): Int {
+        try {
+            val configMax = dto.config?.maxPositionEmbeddings?.jsonPrimitive?.intOrNull
+                ?: dto.config?.maxPositionEmbeddings?.jsonPrimitive?.content?.toIntOrNull()
+            if (configMax != null && configMax > 0) return configMax
+        } catch (_: Exception) { }
+
         val lower = name.lowercase(Locale.US)
         if (lower.contains("128k") || lower.contains("131k")) return 131072
         if (lower.contains("64k")) return 65536
@@ -107,25 +143,36 @@ object NetworkToDomainMapper {
         if (lower.contains("1m")) return 1048576
         if (lower.contains("16k")) return 16384
         if (lower.contains("8k")) return 8192
-        return null
+        if (lower.contains("4k")) return 4096
+
+        return 0
     }
 
     private fun extractModalities(pipelineTag: String?, tags: List<String>?): List<Modality> {
         val list = mutableListOf(Modality.TEXT)
-        if (pipelineTag == "image-to-text" || pipelineTag == "visual-question-answering" || tags?.any { it.contains("vision") || it.contains("vl") } == true) {
+        val tagList = tags ?: emptyList()
+
+        if (pipelineTag in listOf("image-to-text", "visual-question-answering", "image-text-to-text", "image-classification") ||
+            tagList.any { it.contains("vision") || it.contains("vl") }) {
             list.add(Modality.VISION)
         }
-        if (pipelineTag == "automatic-speech-recognition" || tags?.contains("audio") == true) {
+        if (pipelineTag in listOf("automatic-speech-recognition", "text-to-speech", "audio-classification") ||
+            tagList.contains("audio")) {
             list.add(Modality.AUDIO)
         }
-        return list
+        if (tagList.contains("code") || tagList.contains("coder")) {
+            list.add(Modality.CODE)
+        }
+
+        return list.distinct()
     }
 
     private fun extractTasks(pipelineTag: String?, name: String, tags: List<String>?): List<ModelTask> {
         val list = mutableListOf<ModelTask>()
         val lower = name.lowercase(Locale.US)
+        val tagList = tags ?: emptyList()
 
-        if (lower.contains("coder") || lower.contains("code") || tags?.contains("code") == true) {
+        if (lower.contains("coder") || lower.contains("code") || tagList.contains("code")) {
             list.add(ModelTask.CODING)
         }
         if (lower.contains("math") || lower.contains("gsm8k")) {
@@ -142,50 +189,72 @@ object NetworkToDomainMapper {
         if (list.isEmpty()) {
             list.add(ModelTask.GENERAL_TEXT)
         }
-        return list
+
+        return list.distinct()
     }
 
-    private fun extractLicense(tags: List<String>?): Pair<LicenseType, String> {
+    private fun extractLicense(tags: List<String>?, cardData: HfCardDataDto?): Pair<LicenseType, String> {
         val licTag = tags?.find { it.startsWith("license:") }
-        if (licTag == null) return Pair(LicenseType.APACHE_2, "Apache 2.0")
-
-        return when {
-            licTag.contains("apache-2.0") -> Pair(LicenseType.APACHE_2, "Apache 2.0")
-            licTag.contains("mit") -> Pair(LicenseType.MIT, "MIT License")
-            licTag.contains("llama") -> Pair(LicenseType.LLAMA_COMMUNITY, "Llama Community License")
-            licTag.contains("qwen") -> Pair(LicenseType.QWEN_RESEARCH, "Qwen Research License")
-            else -> Pair(LicenseType.PERMISSIVE_OTHER, licTag.removePrefix("license:").uppercase(Locale.US))
+        if (licTag != null) {
+            val licName = licTag.removePrefix("license:")
+            return when {
+                licName.contains("apache-2.0", true) -> Pair(LicenseType.APACHE_2, "Apache 2.0")
+                licName.contains("mit", true) -> Pair(LicenseType.MIT, "MIT License")
+                licName.contains("llama", true) -> Pair(LicenseType.LLAMA_COMMUNITY, "Llama License")
+                licName.contains("qwen", true) -> Pair(LicenseType.QWEN_RESEARCH, "Qwen License")
+                licName.contains("gemma", true) -> Pair(LicenseType.RESTRICTED, "Gemma Terms of Use")
+                else -> Pair(LicenseType.PERMISSIVE_OTHER, licName.uppercase(Locale.US))
+            }
         }
+
+        val cardLic = cardData?.license?.jsonPrimitive?.content
+        if (!cardLic.isNullOrBlank()) {
+            return Pair(LicenseType.PERMISSIVE_OTHER, cardLic.uppercase(Locale.US))
+        }
+
+        return Pair(LicenseType.PERMISSIVE_OTHER, "Not specified")
     }
 
-    private fun extractQuantizations(siblings: List<HfSiblingDto>?, totalParams: Float): List<QuantizationInfo> {
+    private fun extractQuantizations(
+        fullId: String,
+        siblings: List<HfSiblingDto>?,
+        totalParams: Float
+    ): List<QuantizationInfo> {
         val quants = mutableListOf<QuantizationInfo>()
-        val gffiles = siblings?.filter { it.filename?.endsWith(".gguf", true) == true } ?: emptyList()
+        val ggufSiblings = siblings?.filter { it.filename?.endsWith(".gguf", ignoreCase = true) == true } ?: emptyList()
 
-        if (gffiles.isNotEmpty()) {
-            gffiles.take(6).forEachIndexed { idx, sib ->
+        if (ggufSiblings.isNotEmpty()) {
+            ggufSiblings.take(10).forEachIndexed { idx, sib ->
                 val fname = sib.filename ?: ""
+                val fnameUpper = fname.uppercase(Locale.US)
+
                 val qType = when {
-                    fname.contains("Q4_K_M", true) -> "Q4_K_M"
-                    fname.contains("Q8_0", true) -> "Q8_0"
-                    fname.contains("Q5_K_M", true) -> "Q5_K_M"
-                    fname.contains("Q6_K", true) -> "Q6_K"
-                    fname.contains("Q3_K_M", true) -> "Q3_K_M"
-                    fname.contains("Q2_K", true) -> "Q2_K"
-                    else -> "Q4_K_M"
+                    fnameUpper.contains("Q4_K_M") -> "Q4_K_M"
+                    fnameUpper.contains("Q8_0") -> "Q8_0"
+                    fnameUpper.contains("Q5_K_M") -> "Q5_K_M"
+                    fnameUpper.contains("Q6_K") -> "Q6_K"
+                    fnameUpper.contains("Q3_K_M") -> "Q3_K_M"
+                    fnameUpper.contains("Q2_K") -> "Q2_K"
+                    fnameUpper.contains("Q4_0") -> "Q4_0"
+                    fnameUpper.contains("Q5_0") -> "Q5_0"
+                    fnameUpper.contains("Q4_K_S") -> "Q4_K_S"
+                    fnameUpper.contains("FP16") -> "FP16"
+                    else -> fname.substringAfterLast("-").substringBefore(".gguf").ifBlank { "GGUF" }
                 }
 
                 val mult = when (qType) {
                     "Q2_K" -> 0.30f
                     "Q3_K_M" -> 0.42f
-                    "Q4_K_M" -> 0.55f
-                    "Q5_K_M" -> 0.68f
+                    "Q4_K_M", "Q4_K_S", "Q4_0" -> 0.55f
+                    "Q5_K_M", "Q5_0" -> 0.68f
+                    "Q6_K" -> 0.78f
                     "Q8_0" -> 1.05f
+                    "FP16" -> 2.05f
                     else -> 0.55f
                 }
 
-                val sizeBytes = (totalParams * mult * 1024 * 1024 * 1024).toLong()
-                val ramMb = ((totalParams * mult * 1024) + 1200).toInt()
+                val sizeBytes = if (totalParams > 0f) (totalParams * mult * 1024 * 1024 * 1024).toLong() else 0L
+                val ramMb = if (sizeBytes > 0L) ((sizeBytes / (1024 * 1024)) + 1200).toInt() else 0
 
                 quants.add(
                     QuantizationInfo(
@@ -193,7 +262,7 @@ object NetworkToDomainMapper {
                         format = "GGUF",
                         quantType = qType,
                         fileSizeBytes = sizeBytes,
-                        downloadUrl = fname,
+                        downloadUrl = "https://huggingface.co/$fullId/resolve/main/$fname",
                         fileName = fname,
                         estimatedRamMb = ramMb,
                         estimatedVramMb = (ramMb * 0.9f).toInt(),
@@ -203,12 +272,49 @@ object NetworkToDomainMapper {
                             "Q5_K_M" -> 96.5f
                             "Q4_K_M" -> 94.0f
                             "Q3_K_M" -> 88.0f
-                            else -> 78.0f
+                            else -> 80.0f
                         }
                     )
                 )
             }
         }
+
         return quants
+    }
+
+    private fun extractBaseModelId(tags: List<String>?, modelName: String, fullId: String): String? {
+        val baseTag = tags?.find { it.startsWith("base_model:") }?.removePrefix("base_model:")
+        if (!baseTag.isNullOrBlank()) return baseTag
+
+        if (modelName.contains("Instruct", ignoreCase = true) || modelName.contains("Chat", ignoreCase = true)) {
+            return fullId.replace("-Instruct", "", ignoreCase = true).replace("-Chat", "", ignoreCase = true)
+        }
+        return null
+    }
+
+    private fun buildDescription(
+        author: String,
+        pipelineTag: String?,
+        totalParamsBillion: Float,
+        contextLenTokens: Int,
+        downloads: Long,
+        likes: Long
+    ): String {
+        val parts = mutableListOf<String>()
+        if (!pipelineTag.isNullOrBlank()) {
+            parts.add("Task: $pipelineTag")
+        }
+        if (totalParamsBillion > 0f) {
+            parts.add("${String.format(Locale.US, "%.1f", totalParamsBillion)}B parameters")
+        }
+        if (contextLenTokens > 0) {
+            parts.add("${contextLenTokens / 1024}K context")
+        }
+
+        return if (parts.isNotEmpty()) {
+            "Open-weight model by $author (${parts.joinToString(" • ")}). Live statistics: ${downloads} downloads, ${likes} likes."
+        } else {
+            "Model hosted on Hugging Face Hub by $author. Live statistics: ${downloads} downloads, ${likes} likes."
+        }
     }
 }

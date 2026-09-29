@@ -28,61 +28,44 @@ class ModelRepository(
         const val TAG = "HuggingFaceApi"
     }
 
-    suspend fun getModels(forceRefresh: Boolean = false): List<AiModel> = withContext(Dispatchers.IO) {
-        val localEntities = modelDao.getAllModels().first()
-        if (localEntities.isNotEmpty() && !forceRefresh) {
-            Log.d(TAG, "Returning ${localEntities.size} models from local database cache")
-            return@withContext localEntities.map { parseEntity(it) }
-        }
-
+    suspend fun getModels(forceRefresh: Boolean = false, limit: Int = 40, page: Int = 0): List<AiModel> = withContext(Dispatchers.IO) {
         if (api == null) {
-            Log.e(TAG, "HuggingFaceApi instance is null. Cannot fetch models.")
-            throw IllegalStateException("Network client not configured")
+            throw IllegalStateException("Hugging Face API client not configured")
         }
 
-        Log.d(TAG, "Dispatching live getModels() request to Hugging Face API...")
-        try {
-            val dtos = api.getModels(limit = 40, sort = "downloads")
-            Log.d(TAG, "Received ${dtos.size} model DTOs from Hugging Face API")
-            val domainModels = dtos.map { NetworkToDomainMapper.mapToDomain(it) }
-            if (domainModels.isNotEmpty()) {
-                saveToLocalDb(domainModels)
-                Log.d(TAG, "Saved ${domainModels.size} live models to database cache")
-                return@withContext domainModels
+        if (!forceRefresh) {
+            val cached = modelDao.getAllModels().first()
+            if (cached.isNotEmpty()) {
+                Log.d(TAG, "Returning ${cached.size} models from database cache")
+                return@withContext cached.map { parseEntity(it) }
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to fetch live models from Hugging Face API: ${e.localizedMessage}", e)
-            if (localEntities.isNotEmpty()) {
-                Log.d(TAG, "Falling back to ${localEntities.size} cached local database models")
-                return@withContext localEntities.map { parseEntity(it) }
-            }
-            throw e
         }
 
-        emptyList()
+        Log.d(TAG, "Dispatching live getModels(limit=$limit, page=$page) to Hugging Face API...")
+        val dtos = api.getModels(limit = limit, page = page, sort = "downloads")
+        Log.d(TAG, "Received ${dtos.size} model DTOs from Hugging Face API")
+        val domainModels = dtos.map { NetworkToDomainMapper.mapToDomain(it) }
+        if (domainModels.isNotEmpty()) {
+            saveToLocalDb(domainModels)
+        }
+        domainModels
     }
 
     suspend fun getModelById(id: String): AiModel? = withContext(Dispatchers.IO) {
-        val entity = modelDao.getModelById(id)
-        if (entity != null) {
-            return@withContext parseEntity(entity)
+        val cached = modelDao.getModelById(id)
+        if (cached != null) {
+            return@withContext parseEntity(cached)
         }
 
-        if (api != null && id.contains("/")) {
-            try {
-                val parts = id.split("/", limit = 2)
-                Log.d(TAG, "Fetching live detail for model '${parts[0]}/${parts[1]}' from Hugging Face...")
-                val dto = api.getModelDetail(author = parts[0], modelName = parts[1])
-                val domainModel = NetworkToDomainMapper.mapToDomain(dto)
-                saveToLocalDb(listOf(domainModel))
-                return@withContext domainModel
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to fetch model detail for '$id': ${e.localizedMessage}")
-            }
+        if (api == null) {
+            throw IllegalStateException("Hugging Face API client not configured")
         }
 
-        val localEntities = modelDao.getAllModels().first()
-        localEntities.map { parseEntity(it) }.find { it.id == id || it.name.equals(id, ignoreCase = true) }
+        Log.d(TAG, "Fetching live detail for model '$id' from Hugging Face...")
+        val dto = api.getModelDetail(id = id)
+        val domainModel = NetworkToDomainMapper.mapToDomain(dto)
+        saveToLocalDb(listOf(domainModel))
+        domainModel
     }
 
     suspend fun searchModels(
@@ -90,39 +73,35 @@ class ModelRepository(
         selectedTask: ModelTask? = null,
         maxParams: Float? = null,
         minParams: Float? = null,
-        isGgufOnly: Boolean = false
+        isGgufOnly: Boolean = false,
+        page: Int = 0,
+        limit: Int = 30
     ): List<AiModel> = withContext(Dispatchers.IO) {
-        var baseModels: List<AiModel> = emptyList()
-
-        if (api != null && query.isNotBlank()) {
-            try {
-                Log.d(TAG, "Dispatching live search query '$query' to Hugging Face API...")
-                val dtos = api.getModels(search = query, limit = 30, sort = "downloads")
-                Log.d(TAG, "Live search for '$query' returned ${dtos.size} DTOs from Hugging Face")
-                baseModels = dtos.map { NetworkToDomainMapper.mapToDomain(it) }
-            } catch (e: Exception) {
-                Log.e(TAG, "Live search for '$query' failed: ${e.localizedMessage}")
-            }
+        if (api == null) {
+            throw IllegalStateException("Hugging Face API client not configured")
         }
 
-        if (baseModels.isEmpty()) {
-            val localEntities = modelDao.getAllModels().first()
-            baseModels = localEntities.map { parseEntity(it) }
+        val pipelineTag = mapTaskToPipelineTag(selectedTask)
+        Log.d(TAG, "Dispatching live search query '$query' (pipelineTag=$pipelineTag, page=$page) to Hugging Face API...")
+
+        val dtos = api.getModels(
+            search = query.ifBlank { null },
+            pipelineTag = pipelineTag,
+            limit = limit,
+            page = page,
+            sort = "downloads"
+        )
+        Log.d(TAG, "Live search returned ${dtos.size} DTOs from Hugging Face")
+        val domainModels = dtos.map { NetworkToDomainMapper.mapToDomain(it) }
+        if (domainModels.isNotEmpty()) {
+            saveToLocalDb(domainModels)
         }
 
-        baseModels.filter { model ->
-            val matchesQuery = query.isBlank() || 
-                model.name.contains(query, ignoreCase = true) ||
-                model.author.contains(query, ignoreCase = true) ||
-                model.description.contains(query, ignoreCase = true) ||
-                model.architecture.contains(query, ignoreCase = true)
-
-            val matchesTask = selectedTask == null || model.tasks.contains(selectedTask)
-            val matchesMaxParams = maxParams == null || model.totalParamsBillion <= maxParams
-            val matchesMinParams = minParams == null || model.totalParamsBillion >= minParams
+        domainModels.filter { model ->
+            val matchesMaxParams = maxParams == null || model.totalParamsBillion <= 0f || model.totalParamsBillion <= maxParams
+            val matchesMinParams = minParams == null || model.totalParamsBillion <= 0f || model.totalParamsBillion >= minParams
             val matchesGguf = !isGgufOnly || model.quantizations.any { it.format.equals("GGUF", true) }
-
-            matchesQuery && matchesTask && matchesMaxParams && matchesMinParams && matchesGguf
+            matchesMaxParams && matchesMinParams && matchesGguf
         }
     }
 
@@ -145,6 +124,20 @@ class ModelRepository(
                     addedAtEpochMs = System.currentTimeMillis()
                 )
             )
+        }
+    }
+
+    private fun mapTaskToPipelineTag(task: ModelTask?): String? {
+        return when (task) {
+            ModelTask.GENERAL_TEXT -> "text-generation"
+            ModelTask.CODING -> null
+            ModelTask.REASONING -> "text-generation"
+            ModelTask.MATH -> "text-generation"
+            ModelTask.VISION -> "image-to-text"
+            ModelTask.AGENTIC -> "text-generation"
+            ModelTask.TOOL_CALLING -> "text-generation"
+            ModelTask.EMBEDDINGS -> "feature-extraction"
+            null -> null
         }
     }
 

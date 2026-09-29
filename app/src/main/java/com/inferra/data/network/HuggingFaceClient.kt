@@ -21,20 +21,37 @@ object HuggingFaceClient {
         prettyPrint = false
     }
 
+    private fun safeLogD(tag: String, msg: String) {
+        try {
+            Log.d(tag, msg)
+        } catch (_: Throwable) {
+            println("[$tag] $msg")
+        }
+    }
+
+    private fun safeLogE(tag: String, msg: String, tr: Throwable? = null) {
+        try {
+            Log.e(tag, msg, tr)
+        } catch (_: Throwable) {
+            println("[$tag] ERROR: $msg")
+            tr?.printStackTrace()
+        }
+    }
+
     private class LoggingInterceptor : Interceptor {
         override fun intercept(chain: Interceptor.Chain): Response {
             val request = chain.request()
             val startTime = System.currentTimeMillis()
-            Log.d(TAG, "--> SENDING REQUEST: ${request.method} ${request.url}")
+            safeLogD(TAG, "--> SENDING REQUEST: ${request.method} ${request.url}")
 
             return try {
                 val response = chain.proceed(request)
                 val duration = System.currentTimeMillis() - startTime
-                Log.d(TAG, "<-- RECEIVED RESPONSE (${response.code} ${response.message}) from ${request.url} in ${duration}ms [Headers: ${response.headers.size}]")
+                safeLogD(TAG, "<-- RECEIVED RESPONSE (${response.code} ${response.message}) from ${request.url} in ${duration}ms [Headers: ${response.headers.size}]")
                 response
             } catch (e: Exception) {
                 val duration = System.currentTimeMillis() - startTime
-                Log.e(TAG, "<-- REQUEST FAILED: ${request.url} after ${duration}ms: ${e.localizedMessage}", e)
+                safeLogE(TAG, "<-- REQUEST FAILED: ${request.url} after ${duration}ms: ${e.localizedMessage}", e)
                 throw e
             }
         }
