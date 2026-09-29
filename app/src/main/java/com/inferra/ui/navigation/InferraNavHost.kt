@@ -76,16 +76,17 @@ fun InferraNavHost(
                 DiscoveryScreen(
                     viewModel = discoveryViewModel,
                     onNavigateToModel = { modelId -> navController.navigate(Screen.ModelDetail.createRoute(modelId)) },
-                    onNavigateToSearch = { query -> navController.navigate("${Screen.Search.route}?q=$query") },
+                    onNavigateToSearch = { query -> navController.navigate(Screen.Search.createRoute(query)) },
                     onNavigateToHardware = { navController.navigate(Screen.Hardware.route) }
                 )
             }
 
             composable(
-                route = "${Screen.Search.route}?q={query}",
-                arguments = listOf(navArgument("query") { type = NavType.StringType; defaultValue = "" })
+                route = "search?q={q}",
+                arguments = listOf(navArgument("q") { type = NavType.StringType; defaultValue = "" })
             ) { backStack ->
-                val query = backStack.arguments?.getString("query") ?: ""
+                val rawQuery = backStack.arguments?.getString("q") ?: ""
+                val query = try { URLDecoder.decode(rawQuery, "UTF-8") } catch (_: Exception) { rawQuery }
                 SearchScreen(
                     viewModel = searchViewModel,
                     initialQuery = query,
@@ -101,10 +102,10 @@ fun InferraNavHost(
             }
 
             composable(
-                route = Screen.ModelDetail.route,
-                arguments = listOf(navArgument("modelId") { type = NavType.StringType; defaultValue = "" })
+                route = "model_detail?id={id}",
+                arguments = listOf(navArgument("id") { type = NavType.StringType; defaultValue = "" })
             ) { backStack ->
-                val rawModelId = backStack.arguments?.getString("modelId") ?: ""
+                val rawModelId = backStack.arguments?.getString("id") ?: ""
                 val modelId = try { URLDecoder.decode(rawModelId, "UTF-8") } catch (_: Exception) { rawModelId }
 
                 val detailViewModel = remember(modelId) {
