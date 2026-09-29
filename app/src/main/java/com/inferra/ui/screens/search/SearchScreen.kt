@@ -1,5 +1,6 @@
 package com.inferra.ui.screens.search
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,7 +16,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -27,7 +27,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -36,8 +35,7 @@ import com.inferra.ui.components.GlassChip
 import com.inferra.ui.components.GlassTextField
 import com.inferra.ui.components.LiquidGlassBackground
 import com.inferra.ui.components.ModelCard
-import com.inferra.ui.theme.CyberCyan
-import com.inferra.ui.theme.CyberViolet
+import com.inferra.ui.theme.AccentAzure
 import com.inferra.ui.theme.TextMuted
 import com.inferra.ui.theme.TextPrimary
 import com.inferra.ui.theme.TextSecondary
@@ -58,29 +56,34 @@ fun SearchScreen(
 
     LiquidGlassBackground {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Header Search Input Bar
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp)
+                    .padding(horizontal = 20.dp, vertical = 20.dp)
             ) {
                 Text(
-                    text = "SEARCH & FILTER",
-                    fontSize = 11.sp,
+                    text = "Search",
+                    fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
-                    color = CyberCyan,
-                    fontFamily = FontFamily.Monospace,
-                    letterSpacing = 1.sp
+                    color = TextPrimary
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "Find models by name, architecture, capability, or specs",
+                    fontSize = 14.sp,
+                    color = TextSecondary
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
 
                 GlassTextField(
                     value = state.query,
                     onValueChange = viewModel::onQueryChanged,
-                    placeholderText = "Search by model, architecture, GGUF, context...",
+                    placeholderText = "Try 'coding', '32B', 'Qwen', or 'GGUF'...",
                     leadingIcon = {
-                        Icon(imageVector = Icons.Default.Search, contentDescription = "Search", tint = CyberCyan)
+                        Icon(imageVector = Icons.Default.Search, contentDescription = "Search", tint = AccentAzure)
                     },
                     trailingIcon = {
                         if (state.query.isNotEmpty()) {
@@ -91,46 +94,45 @@ fun SearchScreen(
                     }
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
-                // Task Filter Chips
+                // Natural language suggestion chips
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     item {
                         GlassChip(
-                            text = "⚡ Coding",
-                            isSelected = state.selectedTask == ModelTask.CODING,
-                            onClick = { viewModel.onTaskFilterSelected(ModelTask.CODING) }
+                            text = "fast coding models",
+                            isSelected = state.query == "coding",
+                            onClick = { viewModel.onQueryChanged("coding") }
                         )
                     }
                     item {
                         GlassChip(
-                            text = "🧠 Reasoning",
-                            isSelected = state.selectedTask == ModelTask.REASONING,
-                            onClick = { viewModel.onTaskFilterSelected(ModelTask.REASONING) }
+                            text = "models under 8GB VRAM",
+                            isSelected = state.query == "8B",
+                            onClick = { viewModel.onQueryChanged("8B") }
                         )
                     }
                     item {
                         GlassChip(
-                            text = "👁 Vision",
+                            text = "vision models",
                             isSelected = state.selectedTask == ModelTask.VISION,
                             onClick = { viewModel.onTaskFilterSelected(ModelTask.VISION) }
                         )
                     }
                     item {
                         GlassChip(
-                            text = "🛠 Tool Calling",
-                            isSelected = state.selectedTask == ModelTask.TOOL_CALLING,
-                            onClick = { viewModel.onTaskFilterSelected(ModelTask.TOOL_CALLING) }
+                            text = "long-context models",
+                            isSelected = state.query == "context",
+                            onClick = { viewModel.onQueryChanged("context") }
                         )
                     }
                     item {
                         GlassChip(
-                            text = "📦 GGUF Only",
+                            text = "GGUF Only",
                             isSelected = state.isGgufOnly,
-                            onClick = { viewModel.onGgufToggle() },
-                            accentColor = CyberViolet
+                            onClick = { viewModel.onGgufToggle() }
                         )
                     }
                 }
@@ -145,13 +147,12 @@ fun SearchScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "${state.searchResults.size} models found",
+                    text = if (state.searchResults.isNotEmpty()) "${state.searchResults.size} models found" else "",
                     fontSize = 12.sp,
-                    color = TextSecondary,
-                    fontFamily = FontFamily.Monospace
+                    color = TextMuted
                 )
                 if (state.isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.height(16.dp), color = CyberCyan, strokeWidth = 2.dp)
+                    CircularProgressIndicator(modifier = Modifier.height(16.dp), color = AccentAzure, strokeWidth = 2.dp)
                 }
             }
 
@@ -166,10 +167,18 @@ fun SearchScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(imageVector = Icons.Default.FilterList, contentDescription = "Empty", tint = TextMuted, modifier = Modifier.height(48.dp))
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(text = "No models match your query and filters.", color = TextSecondary, fontSize = 14.sp)
-                        Text(text = "Try clearing filters or broadening search term.", color = TextMuted, fontSize = 12.sp)
+                        Text(
+                            text = "No models match your search.",
+                            color = TextPrimary,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Try searching for a different keyword or selecting a suggestion above.",
+                            color = TextMuted,
+                            fontSize = 13.sp
+                        )
                     }
                 }
             } else {
