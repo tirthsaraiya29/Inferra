@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">huggingface.co</domain>
+        <pin-set>
+            <!-- Hugging Face Leaf Certificate -->
+            <pin digest="SHA-256">2MqLa/44pZTt+hMDJgp71yGHBqOjWTnulG4H5xsmyQk=</pin>
+            <!-- Amazon Intermediate CA (Amazon RSA 2048 M01) -->
+            <pin digest="SHA-256">DxH4tt40L+eduF6szpY6TONlxhZhBd+pJ9wbHlQ2fuw=</pin>
+            <!-- Amazon Root CA 1 -->
+            <pin digest="SHA-256">++MBgDH5WGvL9Bcn5Be30cRcL0f5O+NyoXuWtQdX1aI=</pin>
+        </pin-set>
+    </domain-config>
+</network-security-config>
