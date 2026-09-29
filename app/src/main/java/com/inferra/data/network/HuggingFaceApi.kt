@@ -12,8 +12,7 @@ interface HuggingFaceApi {
         @Query("sort") sort: String? = "downloads",
         @Query("direction") direction: Int? = -1,
         @Query("limit") limit: Int = 30,
-        @Query("filter") filter: String? = null,
-        @Query("full") full: Boolean = true
+        @Query("filter") filter: String? = null
     ): List<HuggingFaceModelDto>
 
     @GET("api/models/{author}/{modelName}")

@@ -7,6 +7,8 @@ import com.inferra.domain.model.LineageInfo
 import com.inferra.domain.model.Modality
 import com.inferra.domain.model.ModelTask
 import com.inferra.domain.model.QuantizationInfo
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import java.util.Locale
 
 object NetworkToDomainMapper {
@@ -19,7 +21,10 @@ object NetworkToDomainMapper {
 
         val (totalParams, activeParams, isMoe) = extractParams(modelNameStr)
         
-        val contextLen = dto.config?.maxPositionEmbeddings 
+        val contextLen = try {
+            dto.config?.maxPositionEmbeddings?.jsonPrimitive?.intOrNull
+                ?: dto.config?.maxPositionEmbeddings?.jsonPrimitive?.content?.toIntOrNull()
+        } catch (_: Exception) { null }
             ?: extractContextFromName(modelNameStr) 
             ?: 32768
 
@@ -155,17 +160,18 @@ object NetworkToDomainMapper {
 
     private fun extractQuantizations(siblings: List<HfSiblingDto>?, totalParams: Float): List<QuantizationInfo> {
         val quants = mutableListOf<QuantizationInfo>()
-        val gffiles = siblings?.filter { it.filename.endsWith(".gguf", true) } ?: emptyList()
+        val gffiles = siblings?.filter { it.filename?.endsWith(".gguf", true) == true } ?: emptyList()
 
         if (gffiles.isNotEmpty()) {
             gffiles.take(6).forEachIndexed { idx, sib ->
+                val fname = sib.filename ?: ""
                 val qType = when {
-                    sib.filename.contains("Q4_K_M", true) -> "Q4_K_M"
-                    sib.filename.contains("Q8_0", true) -> "Q8_0"
-                    sib.filename.contains("Q5_K_M", true) -> "Q5_K_M"
-                    sib.filename.contains("Q6_K", true) -> "Q6_K"
-                    sib.filename.contains("Q3_K_M", true) -> "Q3_K_M"
-                    sib.filename.contains("Q2_K", true) -> "Q2_K"
+                    fname.contains("Q4_K_M", true) -> "Q4_K_M"
+                    fname.contains("Q8_0", true) -> "Q8_0"
+                    fname.contains("Q5_K_M", true) -> "Q5_K_M"
+                    fname.contains("Q6_K", true) -> "Q6_K"
+                    fname.contains("Q3_K_M", true) -> "Q3_K_M"
+                    fname.contains("Q2_K", true) -> "Q2_K"
                     else -> "Q4_K_M"
                 }
 
@@ -183,12 +189,12 @@ object NetworkToDomainMapper {
 
                 quants.add(
                     QuantizationInfo(
-                        id = "quant-$idx-${sib.filename}",
+                        id = "quant-$idx-$fname",
                         format = "GGUF",
                         quantType = qType,
                         fileSizeBytes = sizeBytes,
-                        downloadUrl = sib.filename,
-                        fileName = sib.filename,
+                        downloadUrl = fname,
+                        fileName = fname,
                         estimatedRamMb = ramMb,
                         estimatedVramMb = (ramMb * 0.9f).toInt(),
                         relativeQualityScore = when (qType) {
