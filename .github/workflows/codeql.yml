@@ -31,11 +31,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - language: c-cpp
-            build-mode: none
-
-          - language: csharp
-            build-mode: none
 
           - language: java-kotlin
             build-mode: manual
@@ -63,7 +58,7 @@ jobs:
         if: matrix.build-mode == 'manual'
         shell: bash
         run: |
-          cd apps/android-companion
+          cd Inferra
           chmod +x gradlew
           ./gradlew --no-daemon clean compileDebugSources
 
