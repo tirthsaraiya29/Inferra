@@ -10,15 +10,15 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
-    primary = CyberCyan,
-    secondary = CyberViolet,
-    tertiary = CyberEmerald,
-    background = ObsidianBg,
-    surface = ObsidianSurface,
-    surfaceVariant = ObsidianCard,
-    onPrimary = ObsidianBg,
+    primary = AccentAzure,
+    secondary = AccentMuted,
+    tertiary = FitExcellent,
+    background = InkBg,
+    surface = InkSurface,
+    surfaceVariant = InkCard,
+    onPrimary = InkBg,
     onSecondary = TextPrimary,
-    onTertiary = ObsidianBg,
+    onTertiary = InkBg,
     onBackground = TextPrimary,
     onSurface = TextPrimary,
     onSurfaceVariant = TextSecondary
@@ -34,8 +34,8 @@ fun InferraTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = ObsidianBg.toArgb()
-            window.navigationBarColor = ObsidianBg.toArgb()
+            window.statusBarColor = InkBg.toArgb()
+            window.navigationBarColor = InkBg.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
         }
     }

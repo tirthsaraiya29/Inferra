@@ -26,15 +26,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.inferra.ui.theme.CyberCyan
-import com.inferra.ui.theme.GlassBorderLight
-import com.inferra.ui.theme.GlassFillDark
+import com.inferra.ui.theme.AccentAzure
+import com.inferra.ui.theme.GlassBorder
+import com.inferra.ui.theme.InkCard
 import com.inferra.ui.theme.TextMuted
 
 data class NavItem(
@@ -62,32 +60,19 @@ fun GlassBottomBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 12.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(26.dp))
-                .background(GlassFillDark)
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.08f),
-                            Color.White.copy(alpha = 0.02f)
-                        )
-                    )
-                )
+                .clip(RoundedCornerShape(22.dp))
+                .background(InkCard.copy(alpha = 0.92f))
                 .border(
                     width = 1.dp,
-                    brush = Brush.linearGradient(
-                        colors = listOf(
-                            GlassBorderLight.copy(alpha = 0.6f),
-                            GlassBorderLight.copy(alpha = 0.1f)
-                        )
-                    ),
-                    shape = RoundedCornerShape(26.dp)
+                    color = GlassBorder,
+                    shape = RoundedCornerShape(22.dp)
                 )
-                .padding(vertical = 8.dp, horizontal = 6.dp)
+                .padding(vertical = 8.dp, horizontal = 4.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -96,7 +81,7 @@ fun GlassBottomBar(
             ) {
                 bottomNavItems.forEach { item ->
                     val isSelected = currentRoute == item.route
-                    val tint = if (isSelected) CyberCyan else TextMuted
+                    val tint = if (isSelected) AccentAzure else TextMuted
 
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -115,7 +100,7 @@ fun GlassBottomBar(
                         Text(
                             text = item.label,
                             fontSize = 9.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                             color = tint
                         )
                     }

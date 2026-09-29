@@ -16,18 +16,14 @@ import com.inferra.domain.model.ModelTask
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 
 class ModelRepository(
     private val api: HuggingFaceApi?,
     private val modelDao: ModelDao,
     private val watchlistDao: WatchlistDao
 ) {
-    private val json = Json { ignoreUnknownKeys = true; prettyPrint = false }
 
     suspend fun getModels(forceRefresh: Boolean = false): List<AiModel> = withContext(Dispatchers.IO) {
         val localEntities = modelDao.getAllModels().first()
@@ -35,7 +31,7 @@ class ModelRepository(
             return@withContext localEntities.map { parseEntity(it) }
         }
 
-        // Try network fetch from HuggingFace
+        // Try network fetch from HuggingFace API
         if (api != null) {
             try {
                 val dtos = api.getModels(limit = 40, sort = "downloads")
@@ -44,8 +40,8 @@ class ModelRepository(
                     saveToLocalDb(domainModels)
                     return@withContext domainModels
                 }
-            } catch (e: Exception) {
-                // Network unavailable or rate limited -> Fallback to SeedData
+            } catch (_: Exception) {
+                // Network unavailable -> Fallback
             }
         }
 
@@ -60,8 +56,20 @@ class ModelRepository(
         if (entity != null) {
             return@withContext parseEntity(entity)
         }
+
+        if (api != null && id.contains("/")) {
+            try {
+                val parts = id.split("/", limit = 2)
+                val dto = api.getModelDetail(author = parts[0], modelName = parts[1])
+                val domainModel = NetworkToDomainMapper.mapToDomain(dto)
+                saveToLocalDb(listOf(domainModel))
+                return@withContext domainModel
+            } catch (_: Exception) {
+            }
+        }
+
         val all = getModels()
-        all.find { it.id == id || it.name == id }
+        all.find { it.id == id || it.name.equals(id, ignoreCase = true) }
     }
 
     suspend fun searchModels(
@@ -71,8 +79,21 @@ class ModelRepository(
         minParams: Float? = null,
         isGgufOnly: Boolean = false
     ): List<AiModel> = withContext(Dispatchers.IO) {
-        val all = getModels()
-        all.filter { model ->
+        var baseModels: List<AiModel> = emptyList()
+
+        if (api != null && query.isNotBlank()) {
+            try {
+                val dtos = api.getModels(search = query, limit = 30, sort = "downloads")
+                baseModels = dtos.map { NetworkToDomainMapper.mapToDomain(it) }
+            } catch (_: Exception) {
+            }
+        }
+
+        if (baseModels.isEmpty()) {
+            baseModels = getModels()
+        }
+
+        baseModels.filter { model ->
             val matchesQuery = query.isBlank() || 
                 model.name.contains(query, ignoreCase = true) ||
                 model.author.contains(query, ignoreCase = true) ||
@@ -137,7 +158,6 @@ class ModelRepository(
     }
 
     private fun parseEntity(entity: ModelEntity): AiModel {
-        // Construct AiModel from Entity fields or fallback Seed
         val seedMatch = SeedData.seedModels.find { it.id == entity.id }
         if (seedMatch != null) return seedMatch
 

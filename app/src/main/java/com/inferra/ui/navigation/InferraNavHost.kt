@@ -16,6 +16,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.inferra.data.local.AppDatabase
+import com.inferra.data.network.HuggingFaceClient
 import com.inferra.data.repository.CompanionRepository
 import com.inferra.data.repository.DownloadRepository
 import com.inferra.data.repository.HardwareRepository
@@ -46,7 +47,7 @@ fun InferraNavHost(
     val db = remember { AppDatabase.getDatabase(context) }
 
     // Repositories
-    val modelRepository = remember { ModelRepository(null, db.modelDao(), db.watchlistDao()) }
+    val modelRepository = remember { ModelRepository(HuggingFaceClient.api, db.modelDao(), db.watchlistDao()) }
     val hardwareRepository = remember { HardwareRepository(context, db.hardwareProfileDao()) }
     val downloadRepository = remember { DownloadRepository(db.downloadJobDao()) }
     val companionRepository = remember { CompanionRepository(db.deviceTargetDao()) }
@@ -101,7 +102,7 @@ fun InferraNavHost(
 
             composable(
                 route = Screen.ModelDetail.route,
-                arguments = listOf(navArgument("modelId") { type = NavType.StringType })
+                arguments = listOf(navArgument("modelId") { type = NavType.StringType; defaultValue = "" })
             ) { backStack ->
                 val rawModelId = backStack.arguments?.getString("modelId") ?: ""
                 val modelId = try { URLDecoder.decode(rawModelId, "UTF-8") } catch (_: Exception) { rawModelId }
@@ -150,7 +151,6 @@ fun InferraNavHost(
             }
         }
 
-        // Show Glass Bottom Bar only when not on detail screen
         if (!isDetailRoute) {
             GlassBottomBar(
                 currentRoute = currentRoute?.split("?")?.get(0),

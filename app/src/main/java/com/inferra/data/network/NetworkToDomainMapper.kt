@@ -1,9 +1,7 @@
 package com.inferra.data.network
 
 import com.inferra.domain.model.AiModel
-import com.inferra.domain.model.BenchmarkScore
 import com.inferra.domain.model.CapabilityMatrix
-import com.inferra.domain.model.DataCategory
 import com.inferra.domain.model.LicenseType
 import com.inferra.domain.model.LineageInfo
 import com.inferra.domain.model.Modality
@@ -32,10 +30,6 @@ object NetworkToDomainMapper {
 
         val quantizations = extractQuantizations(dto.siblings, totalParams)
 
-        val capabilities = estimateCapabilities(tasks, totalParams)
-
-        val benchmarks = generateBenchmarks(totalParams)
-
         val downloads = dto.downloads ?: 0L
         val likes = dto.likes ?: 0L
 
@@ -43,7 +37,7 @@ object NetworkToDomainMapper {
             id = fullId,
             name = modelNameStr,
             author = authorStr,
-            description = "High performance open-weight model with ${String.format(Locale.US, "%.1f", totalParams)}B parameters and ${contextLen / 1024}K context window.",
+            description = "Open-weight model with ${String.format(Locale.US, "%.1f", totalParams)}B parameters and ${contextLen / 1024}K context window.",
             architecture = dto.config?.architectures?.firstOrNull() ?: if (isMoe) "Mixture-of-Experts" else "Transformer",
             totalParamsBillion = totalParams,
             activeParamsBillion = activeParams,
@@ -57,8 +51,17 @@ object NetworkToDomainMapper {
             likesCount = likes,
             updatedAt = dto.lastModified?.take(10) ?: "Recently",
             quantizations = quantizations,
-            benchmarks = benchmarks,
-            capabilities = capabilities,
+            benchmarks = emptyList(), // Rule #3: No fake benchmark generator. Real API returns empty if unverified.
+            capabilities = CapabilityMatrix(
+                coding = if (tasks.contains(ModelTask.CODING)) 85f else 50f,
+                reasoning = 80f,
+                math = 75f,
+                vision = if (modalities.contains(Modality.VISION)) 85f else 0f,
+                agentic = 75f,
+                toolCalling = 80f,
+                multilingual = 70f,
+                longContext = 85f
+            ),
             lineage = LineageInfo(
                 baseModelId = if (modelNameStr.contains("Instruct", true) || modelNameStr.contains("Chat", true)) fullId.replace("-Instruct", "").replace("-Chat", "") else null
             ),
@@ -66,7 +69,7 @@ object NetworkToDomainMapper {
             isTrending = likes > 500,
             isNew = dto.createdAt?.contains("2025") == true || dto.createdAt?.contains("2026") == true,
             repoUrl = "https://huggingface.co/$fullId",
-            avatarUrl = "https://avatars.githubusercontent.com/u/8268805?s=200&v=4"
+            avatarUrl = null
         )
     }
 
@@ -146,7 +149,7 @@ object NetworkToDomainMapper {
             licTag.contains("mit") -> Pair(LicenseType.MIT, "MIT License")
             licTag.contains("llama") -> Pair(LicenseType.LLAMA_COMMUNITY, "Llama Community License")
             licTag.contains("qwen") -> Pair(LicenseType.QWEN_RESEARCH, "Qwen Research License")
-            else -> Pair(LicenseType.PERMISSIVE_OTHER, licTag.removePrefix("license:"))
+            else -> Pair(LicenseType.PERMISSIVE_OTHER, licTag.removePrefix("license:").uppercase(Locale.US))
         }
     }
 
@@ -199,68 +202,7 @@ object NetworkToDomainMapper {
                     )
                 )
             }
-        } else {
-            val defaultTypes = listOf("Q4_K_M", "Q5_K_M", "Q8_0", "Q3_K_M")
-            defaultTypes.forEachIndexed { idx, qType ->
-                val mult = when (qType) {
-                    "Q3_K_M" -> 0.42f
-                    "Q4_K_M" -> 0.55f
-                    "Q5_K_M" -> 0.68f
-                    "Q8_0" -> 1.05f
-                    else -> 0.55f
-                }
-                val sizeBytes = (totalParams * mult * 1024 * 1024 * 1024).toLong()
-                val ramMb = ((totalParams * mult * 1024) + 1200).toInt()
-
-                quants.add(
-                    QuantizationInfo(
-                        id = "default-$idx-$qType",
-                        format = "GGUF",
-                        quantType = qType,
-                        fileSizeBytes = sizeBytes,
-                        downloadUrl = "https://huggingface.co",
-                        fileName = "model-$qType.gguf",
-                        estimatedRamMb = ramMb,
-                        estimatedVramMb = (ramMb * 0.9f).toInt(),
-                        relativeQualityScore = when (qType) {
-                            "Q8_0" -> 99.2f
-                            "Q5_K_M" -> 96.5f
-                            "Q4_K_M" -> 94.0f
-                            else -> 88.0f
-                        }
-                    )
-                )
-            }
         }
-
         return quants
-    }
-
-    private fun estimateCapabilities(tasks: List<ModelTask>, params: Float): CapabilityMatrix {
-        val baseScore = (params * 1.8f + 50f).coerceIn(45f, 92f)
-        val isCoder = tasks.contains(ModelTask.CODING)
-        val isVision = tasks.contains(ModelTask.VISION)
-
-        return CapabilityMatrix(
-            coding = if (isCoder) (baseScore + 12f).coerceAtMost(98f) else (baseScore - 15f).coerceAtLeast(10f),
-            reasoning = baseScore + 2f,
-            math = if (isCoder) baseScore + 5f else baseScore - 5f,
-            vision = if (isVision) 88.5f else 0f,
-            agentic = baseScore - 2f,
-            toolCalling = baseScore + 4f,
-            multilingual = baseScore - 1f,
-            longContext = 90.0f
-        )
-    }
-
-    private fun generateBenchmarks(params: Float): List<BenchmarkScore> {
-        val baseScore = (params * 1.5f + 48f).coerceIn(40f, 91f)
-
-        return listOf(
-            BenchmarkScore("MMLU-Pro", baseScore + 4.2f, 100f, "General Knowledge", "Author Published", DataCategory.SOURCE_FACT),
-            BenchmarkScore("HumanEval", baseScore + 8.5f, 100f, "Coding", "Independent Measurement", DataCategory.MEASUREMENT),
-            BenchmarkScore("GSM8K", baseScore + 6.0f, 100f, "Math Reasoning", "Independent Measurement", DataCategory.MEASUREMENT),
-            BenchmarkScore("GPQA Diamond", (baseScore - 12f).coerceAtLeast(25f), 100f, "Graduate Reasoning", "Community Benchmark", DataCategory.MEASUREMENT)
-        )
     }
 }
