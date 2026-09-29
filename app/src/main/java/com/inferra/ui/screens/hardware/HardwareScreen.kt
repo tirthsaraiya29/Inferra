@@ -1,6 +1,7 @@
 package com.inferra.ui.screens.hardware
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -33,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.inferra.domain.model.DeviceType
@@ -61,7 +63,7 @@ fun HardwareScreen(
     var newGpu by remember { mutableStateOf("") }
     var newVram by remember { mutableStateOf("24") }
     var newRam by remember { mutableStateOf("64") }
-    val newCpu by remember { mutableStateOf("Intel Core i9 / Ryzen 9") }
+    val newCpu by remember { mutableStateOf("x86_64 CPU") }
 
     LiquidGlassBackground {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -105,65 +107,100 @@ fun HardwareScreen(
                 }
             }
 
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 110.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                items(state.profiles, key = { it.id }) { profile ->
-                    val isActive = state.activeProfile?.id == profile.id
-                    GlassCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        borderColor = if (isActive) AccentAzure else GlassBorder
-                    ) {
-                        Column(modifier = Modifier.padding(18.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = if (profile.deviceType == DeviceType.LOCAL_ANDROID) Icons.Default.PhoneAndroid else Icons.Default.Computer,
-                                        contentDescription = "Type",
-                                        tint = AccentAzure
-                                    )
-                                    Spacer(modifier = Modifier.width(10.dp))
-                                    Text(
-                                        text = profile.name,
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = TextPrimary
-                                    )
-                                }
+            if (state.profiles.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "Hardware profile not configured",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextPrimary,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "No hardware profiles configured yet. Add a workstation or detect this device's memory to calculate model runability.",
+                            fontSize = 13.sp,
+                            color = TextMuted,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            GlassButton(onClick = { viewModel.detectAndAddLocalHardware() }) {
+                                Text(text = "Detect Device Hardware", fontSize = 13.sp)
+                            }
+                            GlassButton(onClick = { showAddDialog = true }) {
+                                Text(text = "Add Custom Profile", fontSize = 13.sp)
+                            }
+                        }
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 110.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    items(state.profiles, key = { it.id }) { profile ->
+                        val isActive = state.activeProfile?.id == profile.id
+                        GlassCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            borderColor = if (isActive) AccentAzure else GlassBorder
+                        ) {
+                            Column(modifier = Modifier.padding(18.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = if (profile.deviceType == DeviceType.LOCAL_ANDROID) Icons.Default.PhoneAndroid else Icons.Default.Computer,
+                                            contentDescription = "Type",
+                                            tint = AccentAzure
+                                        )
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Text(
+                                            text = profile.name,
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextPrimary
+                                        )
+                                    }
 
-                                if (isActive) {
-                                    GlassBadge(text = "Active", color = AccentAzure)
-                                } else if (!profile.isLocalDevice) {
-                                    IconButton(onClick = { viewModel.deleteProfile(profile.id) }) {
-                                        Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete", tint = FitInsufficient)
+                                    if (isActive) {
+                                        GlassBadge(text = "Active", color = AccentAzure)
+                                    } else {
+                                        IconButton(onClick = { viewModel.deleteProfile(profile.id) }) {
+                                            Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete", tint = FitInsufficient)
+                                        }
                                     }
                                 }
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    SpecPill(label = "GPU", value = profile.gpuName, color = TextPrimary)
+                                    SpecPill(label = "VRAM", value = "${profile.vramGb.toInt()} GB", color = AccentAzure)
+                                    SpecPill(label = "SYSTEM RAM", value = "${profile.ramGb.toInt()} GB", color = TextSecondary)
+                                }
+
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                Text(
+                                    text = "CPU: ${profile.cpuName} • OS: ${profile.osName}",
+                                    fontSize = 12.sp,
+                                    color = TextMuted
+                                )
                             }
-
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                SpecPill(label = "GPU", value = profile.gpuName, color = TextPrimary)
-                                SpecPill(label = "VRAM", value = "${profile.vramGb.toInt()} GB", color = AccentAzure)
-                                SpecPill(label = "SYSTEM RAM", value = "${profile.ramGb.toInt()} GB", color = TextSecondary)
-                            }
-
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            Text(
-                                text = "CPU: ${profile.cpuName} • OS: ${profile.osName}",
-                                fontSize = 12.sp,
-                                color = TextMuted
-                            )
                         }
                     }
                 }
