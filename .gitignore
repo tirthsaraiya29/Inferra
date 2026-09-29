@@ -1,12 +1,43 @@
-*.iml
-.gradle
-/local.properties
-/.idea/
-/build
-/app/build
-/captures
-.externalNativeBuild
-.cxx
+# Built application files
+*.apk
+*.ap_
+*.aab
+*.aar
+*.apex
+
+# Files for the Dalvik VM
+*.dex
+
+# Java class files
+*.class
+
+# Generated files
+bin/
+gen/
+out/
+build/
+/app/build/
+
+# Gradle files
+.gradle/
+gradlew --stop
+
+# Local configuration file (sdk path, etc.)
 local.properties
+
+# IDE & Project files
+.idea/
+*.iml
+.vscode/
+
+# Build caches & native tools
+.cxx/
+.externalNativeBuild/
+.kotlin/
+.artifacts/
+captures/
 *.hprof
+
+# OS specific files
 .DS_Store
+Thumbs.db

@@ -19,9 +19,8 @@ Rather than acting as a generic mobile API wrapper, Inferra serves as a **model 
 * **📦 Quantization Explorer**: Deep exploration of GGUF (Q4_K_M, Q8_0, Q5_K_M, Q3_K_M), AWQ, and EXL2 quants with exact file sizes, quality tradeoffs, and memory requirements.
 * **🌳 Interactive Model Lineage Tree**: Visual family tree navigation connecting Base Models → Instruction/Alignment Fine-tunes → GGUF Quantizations → Adapters.
 * **⚖ Side-by-Side Model Comparison**: Compare up to 4 models simultaneously across parameters, active MoE parameters, context lengths, licenses, hardware fit, and benchmarks.
-* **📡 Send-To-PC Download Dispatch**: Queue durable, resumable download jobs on paired desktop companion nodes (`Tirth-PC`, `Workstation-01`) without downloading multi-gigabyte models directly to your phone.
+* **📡 Send-To-PC Download Dispatch**: Queue durable, resumable download jobs on paired desktop companion nodes without downloading multi-gigabyte models directly to your phone.
 * **🧪 Provenance-Aware Benchmarks**: Clear distinction between **Source Facts** (author metadata), **Measurements** (HumanEval, MMLU-Pro, GSM8K, GPQA), and **Derived Intelligence** (app calculations).
-* **🎨 True Liquid Glass UI System**: Dark Cyber-Obsidian visual language featuring real per-pixel background blur, specular edge highlights, gradient glass surfaces, and spring physics.
 
 ---
 
@@ -77,9 +76,3 @@ Inferra respects user privacy and data transparency:
 * No personal data or model prompts are collected or transmitted.
 * Hardware profile data is stored exclusively on-device.
 * Community benchmarking participation is strictly opt-in.
-
----
-
-## 📄 License
-
-Distributed under the Apache 2.0 License. See `LICENSE` for more information.
