@@ -14,8 +14,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.AccountTree
+import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,19 +23,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.inferra.domain.model.AiModel
-import com.inferra.ui.theme.CyberCyan
-import com.inferra.ui.theme.CyberEmerald
-import com.inferra.ui.theme.CyberViolet
-import com.inferra.ui.theme.GlassBorderSubtle
-import com.inferra.ui.theme.GlassFillDark
+import com.inferra.ui.theme.AccentAzure
+import com.inferra.ui.theme.GlassBorder
+import com.inferra.ui.theme.InkCard
 import com.inferra.ui.theme.TextMuted
 import com.inferra.ui.theme.TextPrimary
-import com.inferra.ui.theme.TextSecondary
 
 @Composable
 fun LineageGraphView(
@@ -45,9 +41,9 @@ fun LineageGraphView(
 ) {
     GlassCard(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        backgroundColor = GlassFillDark,
-        borderColor = GlassBorderSubtle
+        shape = RoundedCornerShape(16.dp),
+        backgroundColor = InkCard,
+        borderColor = GlassBorder
     ) {
         Column(
             modifier = Modifier
@@ -62,29 +58,27 @@ fun LineageGraphView(
                 Icon(
                     imageVector = Icons.Default.AccountTree,
                     contentDescription = "Lineage Tree",
-                    tint = CyberViolet,
+                    tint = AccentAzure,
                     modifier = Modifier.height(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "MODEL LINEAGE TREE",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = CyberViolet,
-                    fontFamily = FontFamily.Monospace,
-                    letterSpacing = 1.sp
+                    text = "Model Lineage",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary
                 )
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Step 1: Base Model Node
             val baseName = model.lineage.baseModelId ?: "${model.author}/${model.name.replace("-Instruct", "").replace("-Chat", "")}-Base"
             LineageNode(
-                title = "BASE ARCHITECTURE",
+                title = "Base Model",
                 name = baseName,
-                badgeText = "Base Model",
-                accentColor = CyberViolet,
+                badgeText = "Base",
+                accentColor = TextMuted,
                 onClick = { onNavigateToModel(baseName) }
             )
 
@@ -97,10 +91,10 @@ fun LineageGraphView(
 
             // Step 2: Current Instruct / Fine-tune Node
             LineageNode(
-                title = "INSTRUCTION / ALIGNMENT",
+                title = "Aligned Variant",
                 name = model.id,
-                badgeText = "Instruct Target",
-                accentColor = CyberCyan,
+                badgeText = "Current",
+                accentColor = AccentAzure,
                 isCurrentNode = true,
                 onClick = { }
             )
@@ -112,13 +106,13 @@ fun LineageGraphView(
                 modifier = Modifier.padding(vertical = 8.dp)
             )
 
-            // Step 3: Quantization & Derivatives Node
+            // Step 3: Quantization Node
             val quantText = if (model.quantizations.isNotEmpty()) "${model.quantizations.size} GGUF Quantizations" else "FP16 Weights"
             LineageNode(
-                title = "QUANTIZATION & RUNTIME ARTIFACTS",
+                title = "Inference Formats",
                 name = quantText,
-                badgeText = "Inference Artifacts",
-                accentColor = CyberEmerald,
+                badgeText = "Quantized",
+                accentColor = TextMuted,
                 onClick = { }
             )
         }
@@ -137,12 +131,12 @@ private fun LineageNode(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(if (isCurrentNode) accentColor.copy(alpha = 0.15f) else GlassFillDark)
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (isCurrentNode) accentColor.copy(alpha = 0.12f) else InkCard)
             .border(
-                width = if (isCurrentNode) 1.5.dp else 1.dp,
-                color = if (isCurrentNode) accentColor else GlassBorderSubtle,
-                shape = RoundedCornerShape(14.dp)
+                width = if (isCurrentNode) 1.dp else 0.5.dp,
+                color = if (isCurrentNode) accentColor else GlassBorder,
+                shape = RoundedCornerShape(12.dp)
             )
             .clickable(onClick = onClick)
             .padding(14.dp)
@@ -155,20 +149,19 @@ private fun LineageNode(
             ) {
                 Text(
                     text = title,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = accentColor,
-                    fontFamily = FontFamily.Monospace
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = accentColor
                 )
                 GlassBadge(text = badgeText, color = accentColor)
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             Text(
                 text = name,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
                 color = TextPrimary
             )
         }
