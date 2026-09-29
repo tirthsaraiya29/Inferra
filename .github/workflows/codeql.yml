@@ -58,7 +58,6 @@ jobs:
         if: matrix.build-mode == 'manual'
         shell: bash
         run: |
-          cd Inferra
           chmod +x gradlew
           ./gradlew --no-daemon clean compileDebugSources
 
