@@ -12,9 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.Download
@@ -32,7 +30,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -42,13 +39,11 @@ import com.inferra.ui.components.GlassButton
 import com.inferra.ui.components.GlassCard
 import com.inferra.ui.components.GlassTextField
 import com.inferra.ui.components.LiquidGlassBackground
-import com.inferra.ui.theme.CyberAmber
-import com.inferra.ui.theme.CyberCyan
-import com.inferra.ui.theme.CyberEmerald
-import com.inferra.ui.theme.CyberRose
-import com.inferra.ui.theme.CyberViolet
-import com.inferra.ui.theme.GlassBorderSubtle
-import com.inferra.ui.theme.ObsidianBg
+import com.inferra.ui.theme.AccentAzure
+import com.inferra.ui.theme.FitBorderline
+import com.inferra.ui.theme.FitExcellent
+import com.inferra.ui.theme.FitInsufficient
+import com.inferra.ui.theme.InkBg
 import com.inferra.ui.theme.TextMuted
 import com.inferra.ui.theme.TextPrimary
 import com.inferra.ui.theme.TextSecondary
@@ -67,11 +62,10 @@ fun DownloadsScreen(
 
     LiquidGlassBackground {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Header
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp)
+                    .padding(horizontal = 20.dp, vertical = 20.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -80,31 +74,30 @@ fun DownloadsScreen(
                 ) {
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(imageVector = Icons.Default.Download, contentDescription = "Downloads", tint = CyberCyan)
+                            Icon(imageVector = Icons.Default.Download, contentDescription = "Downloads", tint = AccentAzure)
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "DOWNLOAD QUEUE & SEND-TO-PC",
-                                fontSize = 12.sp,
+                                text = "Downloads",
+                                fontSize = 24.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = CyberCyan,
-                                fontFamily = FontFamily.Monospace,
-                                letterSpacing = 1.sp
+                                color = TextPrimary
                             )
                         }
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Monitor remote model downloads dispatched to desktop companion nodes.",
-                            fontSize = 12.sp,
+                            text = "Monitor downloads dispatched to companion workstations",
+                            fontSize = 13.sp,
                             color = TextSecondary
                         )
                     }
 
                     GlassButton(
                         onClick = { showPairDialog = true },
-                        accentColor = CyberCyan
+                        accentColor = AccentAzure
                     ) {
                         Icon(imageVector = Icons.Default.Lan, contentDescription = "Pair", modifier = Modifier.height(14.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = "Pair PC", fontSize = 11.sp)
+                        Text(text = "Pair PC", fontSize = 12.sp)
                     }
                 }
             }
@@ -114,9 +107,8 @@ fun DownloadsScreen(
                 contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 110.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // Section: Active Downloads
                 item {
-                    Text(text = "ACTIVE DOWNLOAD JOBS", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = CyberCyan, fontFamily = FontFamily.Monospace)
+                    Text(text = "Active Jobs", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
                 }
 
                 if (state.jobs.isEmpty()) {
@@ -126,19 +118,19 @@ fun DownloadsScreen(
                                 text = "No active download jobs queued.",
                                 color = TextMuted,
                                 fontSize = 13.sp,
-                                modifier = Modifier.padding(20.dp)
+                                modifier = Modifier.padding(18.dp)
                             )
                         }
                     }
                 } else {
                     items(state.jobs, key = { it.id }) { job ->
                         val (statusText, statusColor) = when (job.status) {
-                            DownloadStatus.DOWNLOADING -> Pair("⚡ Downloading (${formatSpeed(job.speedBytesPerSec)})", CyberCyan)
-                            DownloadStatus.QUEUED -> Pair("⏳ Queued on PC", CyberAmber)
-                            DownloadStatus.WAITING_FOR_DEVICE -> Pair("📡 Waiting for PC Online", CyberViolet)
-                            DownloadStatus.COMPLETED -> Pair("✓ Completed & Verified", CyberEmerald)
-                            DownloadStatus.PAUSED -> Pair("⏸ Paused", TextMuted)
-                            DownloadStatus.FAILED -> Pair("✕ Download Failed", CyberRose)
+                            DownloadStatus.DOWNLOADING -> Pair("Downloading (${formatSpeed(job.speedBytesPerSec)})", AccentAzure)
+                            DownloadStatus.QUEUED -> Pair("Queued", FitBorderline)
+                            DownloadStatus.WAITING_FOR_DEVICE -> Pair("Waiting for PC", TextMuted)
+                            DownloadStatus.COMPLETED -> Pair("Completed", FitExcellent)
+                            DownloadStatus.PAUSED -> Pair("Paused", TextMuted)
+                            DownloadStatus.FAILED -> Pair("Failed", FitInsufficient)
                         }
 
                         GlassCard(modifier = Modifier.fillMaxWidth()) {
@@ -149,7 +141,7 @@ fun DownloadsScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text(text = job.author, fontSize = 11.sp, color = CyberCyan, fontWeight = FontWeight.Bold)
+                                        Text(text = job.author, fontSize = 12.sp, color = AccentAzure, fontWeight = FontWeight.Medium)
                                         Text(text = job.modelName, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                                     }
                                     IconButton(onClick = { viewModel.cancelJob(job.id) }) {
@@ -164,7 +156,7 @@ fun DownloadsScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    GlassBadge(text = job.quantType, color = CyberViolet)
+                                    GlassBadge(text = job.quantType, color = TextMuted)
                                     GlassBadge(text = statusText, color = statusColor)
                                 }
 
@@ -172,20 +164,18 @@ fun DownloadsScreen(
 
                                 val progressPct = if (job.totalBytes > 0) (job.downloadedBytes.toFloat() / job.totalBytes.toFloat()) else 0f
                                 Text(
-                                    text = "Target Node: ${job.targetDeviceName} • Progress: ${(progressPct * 100).toInt()}% • ETA: ${job.etaSeconds}s",
+                                    text = "Target: ${job.targetDeviceName} • Progress: ${(progressPct * 100).toInt()}% • ETA: ${job.etaSeconds}s",
                                     fontSize = 12.sp,
-                                    color = TextSecondary,
-                                    fontFamily = FontFamily.Monospace
+                                    color = TextSecondary
                                 )
                             }
                         }
                     }
                 }
 
-                // Section: Paired Desktop Companions
                 item {
                     Spacer(modifier = Modifier.height(10.dp))
-                    Text(text = "PAIRED DESKTOP COMPANION NODES", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = CyberViolet, fontFamily = FontFamily.Monospace)
+                    Text(text = "Paired Companions", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
                 }
 
                 items(state.devices, key = { it.id }) { dev ->
@@ -198,7 +188,7 @@ fun DownloadsScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(imageVector = Icons.Default.Computer, contentDescription = "Device", tint = CyberCyan)
+                                Icon(imageVector = Icons.Default.Computer, contentDescription = "Device", tint = AccentAzure)
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Text(text = dev.name, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
@@ -207,8 +197,8 @@ fun DownloadsScreen(
                             }
 
                             GlassBadge(
-                                text = if (dev.isOnline) "ONLINE" else "OFFLINE",
-                                color = if (dev.isOnline) CyberEmerald else TextMuted
+                                text = if (dev.isOnline) "Online" else "Offline",
+                                color = if (dev.isOnline) FitExcellent else TextMuted
                             )
                         }
                     }
@@ -216,11 +206,10 @@ fun DownloadsScreen(
             }
         }
 
-        // Pair Device Bottom Sheet Modal
         if (showPairDialog) {
             ModalBottomSheet(
                 onDismissRequest = { showPairDialog = false },
-                containerColor = ObsidianBg
+                containerColor = InkBg
             ) {
                 Column(
                     modifier = Modifier
@@ -228,11 +217,10 @@ fun DownloadsScreen(
                         .padding(24.dp)
                 ) {
                     Text(
-                        text = "PAIR DESKTOP COMPANION NODE",
-                        fontSize = 13.sp,
+                        text = "Pair companion workstation",
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = CyberCyan,
-                        fontFamily = FontFamily.Monospace
+                        color = TextPrimary
                     )
 
                     Spacer(modifier = Modifier.height(14.dp))
@@ -240,7 +228,7 @@ fun DownloadsScreen(
                     GlassTextField(
                         value = devName,
                         onValueChange = { devName = it },
-                        placeholderText = "PC Name (e.g. 'Studio Workstation')"
+                        placeholderText = "PC Name (e.g. 'Desktop Workstation')"
                     )
                     Spacer(modifier = Modifier.height(10.dp))
 

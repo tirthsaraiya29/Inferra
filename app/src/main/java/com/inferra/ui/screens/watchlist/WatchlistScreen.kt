@@ -18,22 +18,20 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkRemove
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.inferra.ui.components.LiquidGlassBackground
 import com.inferra.ui.components.ModelCard
-import com.inferra.ui.theme.CyberCyan
-import com.inferra.ui.theme.CyberRose
+import com.inferra.ui.theme.AccentAzure
 import com.inferra.ui.theme.TextMuted
+import com.inferra.ui.theme.TextPrimary
 import com.inferra.ui.theme.TextSecondary
 
 @Composable
@@ -46,33 +44,31 @@ fun WatchlistScreen(
     LiquidGlassBackground {
         if (state.isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = CyberCyan)
+                CircularProgressIndicator(color = AccentAzure, strokeWidth = 2.dp)
             }
         } else {
             Column(modifier = Modifier.fillMaxSize()) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 16.dp)
+                        .padding(horizontal = 20.dp, vertical = 20.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.Default.Bookmark, contentDescription = "Watchlist", tint = CyberCyan)
+                        Icon(imageVector = Icons.Default.Bookmark, contentDescription = "Watchlist", tint = AccentAzure)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "SAVED MODELS & WATCHLIST",
-                            fontSize = 12.sp,
+                            text = "Saved Models",
+                            fontSize = 24.sp,
                             fontWeight = FontWeight.Bold,
-                            color = CyberCyan,
-                            fontFamily = FontFamily.Monospace,
-                            letterSpacing = 1.sp
+                            color = TextPrimary
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
-                        text = "Tracked open-weight models saved for offline analysis & download.",
-                        fontSize = 12.sp,
+                        text = "Models saved to your personal library",
+                        fontSize = 13.sp,
                         color = TextSecondary
                     )
                 }
@@ -82,8 +78,9 @@ fun WatchlistScreen(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(imageVector = Icons.Default.BookmarkRemove, contentDescription = "Empty", tint = TextMuted, modifier = Modifier.height(48.dp))
                             Spacer(modifier = Modifier.height(12.dp))
-                            Text(text = "Your watchlist is currently empty.", color = TextSecondary, fontSize = 14.sp)
-                            Text(text = "Tap the bookmark icon on any model detail page to save it.", color = TextMuted, fontSize = 12.sp)
+                            Text(text = "No saved models yet.", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(text = "Tap the bookmark icon on any model page to save it here.", color = TextMuted, fontSize = 13.sp)
                         }
                     }
                 } else {

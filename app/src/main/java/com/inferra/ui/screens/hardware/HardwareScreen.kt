@@ -32,23 +32,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.inferra.domain.model.DeviceType
-import com.inferra.domain.model.HardwareProfile
 import com.inferra.ui.components.GlassBadge
 import com.inferra.ui.components.GlassButton
 import com.inferra.ui.components.GlassCard
 import com.inferra.ui.components.GlassTextField
 import com.inferra.ui.components.LiquidGlassBackground
-import com.inferra.ui.theme.CyberCyan
-import com.inferra.ui.theme.CyberEmerald
-import com.inferra.ui.theme.CyberRose
-import com.inferra.ui.theme.CyberViolet
-import com.inferra.ui.theme.GlassBorderSubtle
-import com.inferra.ui.theme.ObsidianBg
+import com.inferra.ui.theme.AccentAzure
+import com.inferra.ui.theme.FitInsufficient
+import com.inferra.ui.theme.GlassBorder
+import com.inferra.ui.theme.InkBg
 import com.inferra.ui.theme.TextMuted
 import com.inferra.ui.theme.TextPrimary
 import com.inferra.ui.theme.TextSecondary
@@ -72,7 +68,7 @@ fun HardwareScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp)
+                    .padding(horizontal = 20.dp, vertical = 20.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -81,31 +77,30 @@ fun HardwareScreen(
                 ) {
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(imageVector = Icons.Default.DeveloperBoard, contentDescription = "Hardware", tint = CyberCyan)
+                            Icon(imageVector = Icons.Default.DeveloperBoard, contentDescription = "Hardware", tint = AccentAzure)
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "HARDWARE PROFILES",
-                                fontSize = 12.sp,
+                                text = "Hardware Profiles",
+                                fontSize = 24.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = CyberCyan,
-                                fontFamily = FontFamily.Monospace,
-                                letterSpacing = 1.sp
+                                color = TextPrimary
                             )
                         }
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Manage system hardware for live AI model runability calculations.",
-                            fontSize = 12.sp,
+                            text = "Configure devices for local hardware runability estimates",
+                            fontSize = 13.sp,
                             color = TextSecondary
                         )
                     }
 
                     GlassButton(
                         onClick = { showAddDialog = true },
-                        accentColor = CyberCyan
+                        accentColor = AccentAzure
                     ) {
                         Icon(imageVector = Icons.Default.Add, contentDescription = "Add", modifier = Modifier.height(14.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = "Add PC", fontSize = 11.sp)
+                        Text(text = "Add Device", fontSize = 12.sp)
                     }
                 }
             }
@@ -119,7 +114,7 @@ fun HardwareScreen(
                     val isActive = state.activeProfile?.id == profile.id
                     GlassCard(
                         modifier = Modifier.fillMaxWidth(),
-                        borderColor = if (isActive) CyberCyan else GlassBorderSubtle
+                        borderColor = if (isActive) AccentAzure else GlassBorder
                     ) {
                         Column(modifier = Modifier.padding(18.dp)) {
                             Row(
@@ -131,7 +126,7 @@ fun HardwareScreen(
                                     Icon(
                                         imageVector = if (profile.deviceType == DeviceType.LOCAL_ANDROID) Icons.Default.PhoneAndroid else Icons.Default.Computer,
                                         contentDescription = "Type",
-                                        tint = CyberCyan
+                                        tint = AccentAzure
                                     )
                                     Spacer(modifier = Modifier.width(10.dp))
                                     Text(
@@ -143,10 +138,10 @@ fun HardwareScreen(
                                 }
 
                                 if (isActive) {
-                                    GlassBadge(text = "ACTIVE PROFILE", color = CyberCyan)
+                                    GlassBadge(text = "Active", color = AccentAzure)
                                 } else if (!profile.isLocalDevice) {
                                     IconButton(onClick = { viewModel.deleteProfile(profile.id) }) {
-                                        Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete", tint = CyberRose)
+                                        Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete", tint = FitInsufficient)
                                     }
                                 }
                             }
@@ -157,18 +152,17 @@ fun HardwareScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                SpecPill(label = "GPU", value = profile.gpuName, color = CyberEmerald)
-                                SpecPill(label = "VRAM", value = "${profile.vramGb.toInt()} GB", color = CyberCyan)
-                                SpecPill(label = "SYSTEM RAM", value = "${profile.ramGb.toInt()} GB", color = CyberViolet)
+                                SpecPill(label = "GPU", value = profile.gpuName, color = TextPrimary)
+                                SpecPill(label = "VRAM", value = "${profile.vramGb.toInt()} GB", color = AccentAzure)
+                                SpecPill(label = "SYSTEM RAM", value = "${profile.ramGb.toInt()} GB", color = TextSecondary)
                             }
 
                             Spacer(modifier = Modifier.height(10.dp))
 
                             Text(
-                                text = "CPU: ${profile.cpuName} • OS: ${profile.osName} • Runtime: ${profile.preferredRuntime}",
+                                text = "CPU: ${profile.cpuName} • OS: ${profile.osName}",
                                 fontSize = 12.sp,
-                                color = TextMuted,
-                                fontFamily = FontFamily.Monospace
+                                color = TextMuted
                             )
                         }
                     }
@@ -179,7 +173,7 @@ fun HardwareScreen(
         if (showAddDialog) {
             ModalBottomSheet(
                 onDismissRequest = { showAddDialog = false },
-                containerColor = ObsidianBg
+                containerColor = InkBg
             ) {
                 Column(
                     modifier = Modifier
@@ -187,11 +181,10 @@ fun HardwareScreen(
                         .padding(24.dp)
                 ) {
                     Text(
-                        text = "ADD CUSTOM WORKSTATION PROFILE",
-                        fontSize = 13.sp,
+                        text = "Add hardware profile",
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = CyberCyan,
-                        fontFamily = FontFamily.Monospace
+                        color = TextPrimary
                     )
 
                     Spacer(modifier = Modifier.height(14.dp))
@@ -199,14 +192,14 @@ fun HardwareScreen(
                     GlassTextField(
                         value = newName,
                         onValueChange = { newName = it },
-                        placeholderText = "Profile Name (e.g. 'RTX 4090 Workstation')"
+                        placeholderText = "Device Name (e.g. 'Desktop Workstation')"
                     )
                     Spacer(modifier = Modifier.height(10.dp))
 
                     GlassTextField(
                         value = newGpu,
                         onValueChange = { newGpu = it },
-                        placeholderText = "GPU Name (e.g. 'NVIDIA RTX 4090')"
+                        placeholderText = "GPU Model (e.g. 'RTX 4090')"
                     )
                     Spacer(modifier = Modifier.height(10.dp))
 
@@ -258,7 +251,7 @@ private fun SpecPill(
     color: Color
 ) {
     Column {
-        Text(text = label, fontSize = 9.sp, fontWeight = FontWeight.Bold, color = TextMuted, fontFamily = FontFamily.Monospace)
-        Text(text = value, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = color, fontFamily = FontFamily.Monospace)
+        Text(text = label, fontSize = 10.sp, fontWeight = FontWeight.Medium, color = TextMuted)
+        Text(text = value, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = color)
     }
 }

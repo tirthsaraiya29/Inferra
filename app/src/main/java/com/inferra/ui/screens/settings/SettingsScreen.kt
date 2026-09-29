@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Palette
@@ -28,16 +27,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.inferra.ui.components.GlassBadge
 import com.inferra.ui.components.GlassCard
 import com.inferra.ui.components.LiquidGlassBackground
-import com.inferra.ui.theme.CyberCyan
-import com.inferra.ui.theme.CyberEmerald
-import com.inferra.ui.theme.CyberViolet
+import com.inferra.ui.theme.AccentAzure
+import com.inferra.ui.theme.FitExcellent
 import com.inferra.ui.theme.TextMuted
 import com.inferra.ui.theme.TextPrimary
 import com.inferra.ui.theme.TextSecondary
@@ -53,26 +49,24 @@ fun SettingsScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp)
+                    .padding(horizontal = 20.dp, vertical = 20.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(imageVector = Icons.Default.Settings, contentDescription = "Settings", tint = CyberCyan)
+                    Icon(imageVector = Icons.Default.Settings, contentDescription = "Settings", tint = AccentAzure)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "APP SETTINGS & PREFERENCES",
-                        fontSize = 12.sp,
+                        text = "Settings",
+                        fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
-                        color = CyberCyan,
-                        fontFamily = FontFamily.Monospace,
-                        letterSpacing = 1.sp
+                        color = TextPrimary
                     )
                 }
 
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = "Configure visual liquid glass intensity, theme, privacy & companion settings.",
-                    fontSize = 12.sp,
+                    text = "App preferences and rendering controls",
+                    fontSize = 13.sp,
                     color = TextSecondary
                 )
             }
@@ -82,26 +76,26 @@ fun SettingsScreen(
                 contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 110.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Section: Visual & Liquid Glass Engine
+                // Section: Visual Material Engine
                 item {
                     GlassCard(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(20.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(imageVector = Icons.Default.Palette, contentDescription = "Glass", tint = CyberCyan)
+                                Icon(imageVector = Icons.Default.Palette, contentDescription = "Glass", tint = AccentAzure)
                                 Spacer(modifier = Modifier.width(10.dp))
-                                Text(text = "LIQUID GLASS RENDER ENGINE", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                Text(text = "Glass Material Intensity", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
                             }
 
                             Spacer(modifier = Modifier.height(14.dp))
 
-                            Text(text = "Glass Surface Refraction Intensity", fontSize = 12.sp, color = TextSecondary)
+                            Text(text = "Material Refraction Level", fontSize = 12.sp, color = TextSecondary)
                             Spacer(modifier = Modifier.height(6.dp))
                             Slider(
                                 value = state.glassIntensity,
                                 onValueChange = viewModel::updateGlassIntensity,
                                 colors = SliderDefaults.colors(
-                                    thumbColor = CyberCyan,
-                                    activeTrackColor = CyberCyan,
+                                    thumbColor = AccentAzure,
+                                    activeTrackColor = AccentAzure,
                                     inactiveTrackColor = TextMuted
                                 )
                             )
@@ -114,15 +108,15 @@ fun SettingsScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column {
-                                    Text(text = "Dark Cyber-Obsidian Theme", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                                    Text(text = "Primary high-contrast dark visual design", fontSize = 12.sp, color = TextMuted)
+                                    Text(text = "Editorial Dark Theme", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
+                                    Text(text = "Quiet high-contrast dark theme", fontSize = 12.sp, color = TextMuted)
                                 }
                                 Switch(
                                     checked = state.isDarkMode,
                                     onCheckedChange = { viewModel.toggleDarkMode() },
                                     colors = SwitchDefaults.colors(
-                                        checkedThumbColor = CyberCyan,
-                                        checkedTrackColor = CyberCyan.copy(alpha = 0.3f)
+                                        checkedThumbColor = AccentAzure,
+                                        checkedTrackColor = AccentAzure.copy(alpha = 0.3f)
                                     )
                                 )
                             }
@@ -135,9 +129,9 @@ fun SettingsScreen(
                     GlassCard(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(20.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(imageVector = Icons.Default.Security, contentDescription = "Privacy", tint = CyberEmerald)
+                                Icon(imageVector = Icons.Default.Security, contentDescription = "Privacy", tint = FitExcellent)
                                 Spacer(modifier = Modifier.width(10.dp))
-                                Text(text = "PRIVACY & OPT-IN BENCHMARKING", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                Text(text = "Privacy & Diagnostics", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
                             }
 
                             Spacer(modifier = Modifier.height(12.dp))
@@ -148,16 +142,16 @@ fun SettingsScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(text = "Opt-in Community Hardware Benchmark Contribution", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                                    Text(text = "Submit anonymous tokens/sec measurements to train Inferra speed predictor.", fontSize = 11.sp, color = TextMuted)
+                                    Text(text = "Anonymous speed estimation feedback", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
+                                    Text(text = "Contribute tokens/sec measurements to improve Inferra's hardware fit model.", fontSize = 11.sp, color = TextMuted)
                                 }
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Switch(
                                     checked = state.isTelemetryEnabled,
                                     onCheckedChange = { viewModel.toggleTelemetry() },
                                     colors = SwitchDefaults.colors(
-                                        checkedThumbColor = CyberEmerald,
-                                        checkedTrackColor = CyberEmerald.copy(alpha = 0.3f)
+                                        checkedThumbColor = FitExcellent,
+                                        checkedTrackColor = FitExcellent.copy(alpha = 0.3f)
                                     )
                                 )
                             }
@@ -170,22 +164,21 @@ fun SettingsScreen(
                     GlassCard(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(20.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(imageVector = Icons.Default.Info, contentDescription = "About", tint = CyberViolet)
+                                Icon(imageVector = Icons.Default.Info, contentDescription = "About", tint = AccentAzure)
                                 Spacer(modifier = Modifier.width(10.dp))
-                                Text(text = "ABOUT INFERRA", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                Text(text = "About Inferra", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
                             }
 
                             Spacer(modifier = Modifier.height(10.dp))
 
                             Text(
-                                text = "Inferra v1.0.0 • Open-weight AI Model Intelligence Platform",
+                                text = "Inferra v1.0.0",
                                 fontSize = 13.sp,
-                                color = TextSecondary,
-                                fontFamily = FontFamily.Monospace
+                                color = TextSecondary
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Built for discovery, hardware compatibility analysis, lineage exploration, and remote desktop download management.",
+                                text = "A quiet, intelligent application for discovering and understanding AI models.",
                                 fontSize = 12.sp,
                                 color = TextMuted
                             )

@@ -18,18 +18,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.inferra.domain.model.CapabilityMatrix
-import com.inferra.ui.theme.CyberCyan
-import com.inferra.ui.theme.CyberEmerald
-import com.inferra.ui.theme.CyberViolet
-import com.inferra.ui.theme.GlassBorderSubtle
-import com.inferra.ui.theme.GlassFillDark
+import com.inferra.ui.theme.AccentAzure
+import com.inferra.ui.theme.GlassBorder
+import com.inferra.ui.theme.InkCard
 import com.inferra.ui.theme.TextMuted
 import com.inferra.ui.theme.TextPrimary
 import java.util.Locale
@@ -41,9 +37,9 @@ fun CapabilityRadar(
 ) {
     GlassCard(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        backgroundColor = GlassFillDark,
-        borderColor = GlassBorderSubtle
+        shape = RoundedCornerShape(16.dp),
+        backgroundColor = InkCard,
+        borderColor = GlassBorder
     ) {
         Column(
             modifier = Modifier
@@ -51,25 +47,23 @@ fun CapabilityRadar(
                 .padding(20.dp)
         ) {
             Text(
-                text = "CAPABILITY MATRIX",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = CyberCyan,
-                fontFamily = FontFamily.Monospace,
-                letterSpacing = 1.sp
+                text = "Capabilities Summary",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextPrimary
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            SkillBar("Coding & Synthesis", capabilities.coding, CyberCyan)
-            SkillBar("Mathematical Proofs", capabilities.math, CyberViolet)
-            SkillBar("Complex Reasoning", capabilities.reasoning, CyberEmerald)
-            SkillBar("Agentic Workflows", capabilities.agentic, CyberCyan)
-            SkillBar("Tool & Function Calling", capabilities.toolCalling, CyberViolet)
+            SkillBar("Coding & Synthesis", capabilities.coding, AccentAzure)
+            SkillBar("Mathematical Proofs", capabilities.math, AccentAzure)
+            SkillBar("Complex Reasoning", capabilities.reasoning, AccentAzure)
+            SkillBar("Agentic Workflows", capabilities.agentic, AccentAzure)
+            SkillBar("Tool & Function Calling", capabilities.toolCalling, AccentAzure)
             if (capabilities.vision > 0f) {
-                SkillBar("Vision & Spatial Perception", capabilities.vision, CyberEmerald)
+                SkillBar("Vision & Perception", capabilities.vision, AccentAzure)
             }
-            SkillBar("Long Context Retention", capabilities.longContext, CyberCyan)
+            SkillBar("Long Context Retention", capabilities.longContext, AccentAzure)
         }
     }
 }
@@ -98,11 +92,10 @@ private fun SkillBar(
                 color = TextPrimary
             )
             Text(
-                text = String.format(Locale.US, "%.1f", score),
+                text = String.format(Locale.US, "%.0f%%", score),
                 fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = accentColor,
-                fontFamily = FontFamily.Monospace
+                fontWeight = FontWeight.Medium,
+                color = TextMuted
             )
         }
 
@@ -111,23 +104,16 @@ private fun SkillBar(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(8.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .background(GlassBorderSubtle)
+                .height(6.dp)
+                .clip(RoundedCornerShape(3.dp))
+                .background(GlassBorder)
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth(progressAnim)
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(
-                        brush = Brush.horizontalGradient(
-                            colors = listOf(
-                                accentColor.copy(alpha = 0.5f),
-                                accentColor
-                            )
-                        )
-                    )
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(accentColor)
             )
         }
     }

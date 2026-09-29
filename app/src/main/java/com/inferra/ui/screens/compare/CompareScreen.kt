@@ -28,25 +28,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.inferra.domain.model.AiModel
 import com.inferra.domain.model.FitGrade
 import com.inferra.ui.components.GlassBadge
 import com.inferra.ui.components.GlassCard
 import com.inferra.ui.components.GlassChip
 import com.inferra.ui.components.LiquidGlassBackground
-import com.inferra.ui.theme.CyberAmber
-import com.inferra.ui.theme.CyberCyan
-import com.inferra.ui.theme.CyberEmerald
-import com.inferra.ui.theme.CyberViolet
+import com.inferra.ui.theme.AccentAzure
 import com.inferra.ui.theme.FitBorderline
 import com.inferra.ui.theme.FitExcellent
 import com.inferra.ui.theme.FitInsufficient
-import com.inferra.ui.theme.GlassBorderSubtle
-import com.inferra.ui.theme.GlassFillDark
 import com.inferra.ui.theme.TextMuted
 import com.inferra.ui.theme.TextPrimary
 import com.inferra.ui.theme.TextSecondary
@@ -62,37 +55,35 @@ fun CompareScreen(
     LiquidGlassBackground {
         if (state.isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = CyberCyan)
+                CircularProgressIndicator(color = AccentAzure, strokeWidth = 2.dp)
             }
         } else {
             Column(modifier = Modifier.fillMaxSize()) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 16.dp)
+                        .padding(horizontal = 20.dp, vertical = 20.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.CompareArrows, contentDescription = "Compare", tint = CyberCyan)
+                        Icon(imageVector = Icons.AutoMirrored.Filled.CompareArrows, contentDescription = "Compare", tint = AccentAzure)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "MODEL COMPARISON ENGINE",
-                            fontSize = 12.sp,
+                            text = "Compare Models",
+                            fontSize = 24.sp,
                             fontWeight = FontWeight.Bold,
-                            color = CyberCyan,
-                            fontFamily = FontFamily.Monospace,
-                            letterSpacing = 1.sp
+                            color = TextPrimary
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
-                        text = "Select models to analyze parameters, benchmarks, and hardware fit side-by-side.",
+                        text = "Select models to analyze parameters, specs, and hardware fit side-by-side",
                         fontSize = 13.sp,
                         color = TextSecondary
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -103,7 +94,7 @@ fun CompareScreen(
                                 text = model.name,
                                 isSelected = isSelected,
                                 onClick = { viewModel.selectModel(model) },
-                                accentColor = if (isSelected) CyberCyan else TextMuted
+                                accentColor = AccentAzure
                             )
                         }
                     }
@@ -128,11 +119,11 @@ fun CompareScreen(
                                     Box(modifier = Modifier.width(220.dp)) {
                                         GlassCard(onClick = { onNavigateToModel(model.id) }) {
                                             Column(modifier = Modifier.padding(16.dp)) {
-                                                Text(text = model.author, fontSize = 11.sp, color = CyberCyan, fontWeight = FontWeight.Bold)
+                                                Text(text = model.author, fontSize = 12.sp, color = AccentAzure, fontWeight = FontWeight.SemiBold)
                                                 Spacer(modifier = Modifier.height(4.dp))
-                                                Text(text = model.name, fontSize = 15.sp, fontWeight = FontWeight.Black, color = TextPrimary)
+                                                Text(text = model.name, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                                                 Spacer(modifier = Modifier.height(8.dp))
-                                                GlassBadge(text = model.licenseName, color = CyberViolet)
+                                                GlassBadge(text = model.licenseName, color = TextMuted)
                                             }
                                         }
                                     }
@@ -141,7 +132,7 @@ fun CompareScreen(
                         }
 
                         item {
-                            CompareSectionTitle("PARAMETERS & ARCHITECTURE")
+                            CompareSectionTitle("Parameters & Architecture")
                             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                                 state.selectedModels.forEach { model ->
                                     CompareCell(
@@ -154,27 +145,27 @@ fun CompareScreen(
                         }
 
                         item {
-                            CompareSectionTitle("CONTEXT WINDOW")
+                            CompareSectionTitle("Context Window")
                             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                                 state.selectedModels.forEach { model ->
                                     CompareCell(
                                         label = "Max Context",
                                         value = "${model.contextLengthTokens / 1024}K tokens",
-                                        accentColor = CyberCyan
+                                        accentColor = AccentAzure
                                     )
                                 }
                             }
                         }
 
                         item {
-                            CompareSectionTitle("HARDWARE FIT (${state.activeHardwareProfile?.gpuName ?: "GPU"})")
+                            CompareSectionTitle("Hardware Fit (${state.activeHardwareProfile?.gpuName ?: "GPU"})")
                             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                                 state.selectedModels.forEach { model ->
                                     val comp = state.compatibilityMap[model.id]
                                     val fitText = when (comp?.fitGrade) {
-                                        FitGrade.EXCELLENT -> "✓ 100% VRAM Fit"
-                                        FitGrade.BORDERLINE -> "⚠ ${comp.offloadPercentage}% Offload"
-                                        FitGrade.INSUFFICIENT -> "✕ Exceeds Memory"
+                                        FitGrade.EXCELLENT -> "Fits device"
+                                        FitGrade.BORDERLINE -> "${comp.offloadPercentage}% Offload"
+                                        FitGrade.INSUFFICIENT -> "Requires RAM"
                                         else -> "Unknown"
                                     }
                                     val fitColor = when (comp?.fitGrade) {
@@ -185,24 +176,10 @@ fun CompareScreen(
                                     }
 
                                     CompareCell(
-                                        label = "Est. Speed",
-                                        value = "${String.format(Locale.US, "%.1f", comp?.estimatedTokensPerSec ?: 0f)} tok/s",
-                                        subValue = fitText,
+                                        label = "Est. Memory Fit",
+                                        value = fitText,
+                                        subValue = "Inferra estimate",
                                         accentColor = fitColor
-                                    )
-                                }
-                            }
-                        }
-
-                        item {
-                            CompareSectionTitle("BENCHMARK: HumanEval (Coding)")
-                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                                state.selectedModels.forEach { model ->
-                                    val score = model.benchmarks.find { it.name.contains("HumanEval", true) }?.score ?: model.capabilities.coding
-                                    CompareCell(
-                                        label = "Score",
-                                        value = "${String.format(Locale.US, "%.1f", score)}%",
-                                        accentColor = CyberEmerald
                                     )
                                 }
                             }
@@ -218,11 +195,9 @@ fun CompareScreen(
 private fun CompareSectionTitle(title: String) {
     Text(
         text = title,
-        fontSize = 11.sp,
-        fontWeight = FontWeight.Bold,
-        color = CyberCyan,
-        fontFamily = FontFamily.Monospace,
-        letterSpacing = 1.sp,
+        fontSize = 14.sp,
+        fontWeight = FontWeight.SemiBold,
+        color = TextPrimary,
         modifier = Modifier.padding(top = 18.dp, bottom = 8.dp)
     )
 }
@@ -235,11 +210,11 @@ private fun CompareCell(
     accentColor: Color = TextPrimary
 ) {
     Box(modifier = Modifier.width(220.dp)) {
-        GlassCard(shape = RoundedCornerShape(14.dp)) {
+        GlassCard(shape = RoundedCornerShape(12.dp)) {
             Column(modifier = Modifier.padding(14.dp)) {
-                Text(text = label, fontSize = 10.sp, color = TextMuted, fontFamily = FontFamily.Monospace)
+                Text(text = label, fontSize = 11.sp, color = TextMuted)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(text = value, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = accentColor, fontFamily = FontFamily.Monospace)
+                Text(text = value, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = accentColor)
                 if (subValue != null) {
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(text = subValue, fontSize = 12.sp, color = TextSecondary)
