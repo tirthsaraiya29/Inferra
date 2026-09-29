@@ -13,8 +13,7 @@ import kotlinx.coroutines.launch
 
 data class HardwareUiState(
     val profiles: List<HardwareProfile> = emptyList(),
-    val activeProfile: HardwareProfile? = null,
-    val localDetectedProfile: HardwareProfile? = null
+    val activeProfile: HardwareProfile? = null
 )
 
 class HardwareViewModel(
@@ -41,15 +40,23 @@ class HardwareViewModel(
                 name = name,
                 deviceType = DeviceType.DESKTOP_PC,
                 cpuName = cpuName.ifBlank { "x86_64 CPU" },
-                gpuName = gpuName.ifBlank { "NVIDIA GPU" },
+                gpuName = gpuName.ifBlank { "GPU" },
                 vramGb = vramGb,
                 ramGb = ramGb,
                 osName = "Windows 11 / Linux",
-                preferredRuntime = "llama.cpp (CUDA)",
+                preferredRuntime = "llama.cpp",
                 availableStorageGb = 1000f,
                 isLocalDevice = false
             )
             hardwareRepository.addCustomProfile(newProfile)
+            loadProfiles()
+        }
+    }
+
+    fun detectAndAddLocalHardware() {
+        viewModelScope.launch {
+            val detected = hardwareRepository.detectLocalAndroidHardware()
+            hardwareRepository.addCustomProfile(detected)
             loadProfiles()
         }
     }
@@ -64,13 +71,11 @@ class HardwareViewModel(
     private fun loadProfiles() {
         viewModelScope.launch {
             hardwareRepository.profilesFlow.collect { profiles ->
-                val detected = hardwareRepository.detectLocalAndroidHardware()
-                val active = profiles.find { !it.isLocalDevice } ?: detected
+                val active = profiles.firstOrNull()
                 _uiState.update {
                     it.copy(
                         profiles = profiles,
-                        activeProfile = active,
-                        localDetectedProfile = detected
+                        activeProfile = active
                     )
                 }
             }
