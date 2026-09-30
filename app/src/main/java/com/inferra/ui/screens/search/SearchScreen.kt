@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
@@ -216,12 +215,31 @@ fun SearchScreen(
                     contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 110.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    items(state.searchResults, key = { it.id }) { model ->
+                    items(state.searchResults.size, key = { state.searchResults[it].id }) { idx ->
+                        val model = state.searchResults[idx]
+                        if (idx >= state.searchResults.size - 2 && !state.isLoadingMore && state.canLoadMore) {
+                            LaunchedEffect(idx) {
+                                viewModel.loadNextPage()
+                            }
+                        }
                         ModelCard(
                             model = model,
                             compatibility = state.compatibilityMap[model.id],
                             onClick = { onNavigateToModel(model.id) }
                         )
+                    }
+
+                    if (state.isLoadingMore) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 12.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(color = AccentAzure, strokeWidth = 2.dp, modifier = Modifier.height(20.dp))
+                            }
+                        }
                     }
                 }
             }
