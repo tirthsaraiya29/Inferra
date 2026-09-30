@@ -57,7 +57,7 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "Settings",
-                        fontSize = 24.sp,
+                        fontSize = 28.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
                     )
