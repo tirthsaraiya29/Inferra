@@ -19,7 +19,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 class ModelDownloader(
     private val context: Context,
-    private val okHttpClient: OkHttpClient = OkHttpClient()
+    private val okHttpClient: OkHttpClient = OkHttpClient(),
 ) {
     private companion object {
         const val TAG = "ModelDownloader"
@@ -60,7 +60,7 @@ class ModelDownloader(
 
         try {
             val response = okHttpClient.newCall(requestBuilder.build()).execute()
-            if (!response.isSuccessful && response.code != 206) {
+            if (!response.isSuccessful && (response.code != 206)) {
                 updateJobProgress(
                     updatedJob.copy(
                         status = DownloadStatus.FAILED,

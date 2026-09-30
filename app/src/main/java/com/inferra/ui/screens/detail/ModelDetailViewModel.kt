@@ -33,7 +33,7 @@ data class ModelDetailUiState(
     val companionDevices: List<DeviceTarget> = emptyList(),
     val sendToPcSuccessMessage: String? = null,
     val activeLocalDownloadJob: DownloadJob? = null,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
 )
 
 class ModelDetailViewModel(
@@ -147,7 +147,7 @@ class ModelDetailViewModel(
                         baseModel.quantizations
                     }
 
-                    val finalQuants = if (discoveredQuants.isNotEmpty()) discoveredQuants else baseModel.quantizations
+                    val finalQuants = discoveredQuants.ifEmpty { baseModel.quantizations }
                     val enrichedModel = baseModel.copy(quantizations = finalQuants)
 
                     val primaryQuant = finalQuants.firstOrNull()

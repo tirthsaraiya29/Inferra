@@ -1,6 +1,5 @@
 package com.inferra.ui.screens.detail
 
-import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -69,11 +68,11 @@ import java.util.Locale
 fun ModelDetailScreen(
     viewModel: ModelDetailViewModel,
     onBack: () -> Unit,
-    onNavigateToModel: (String) -> Unit = {}
+    onNavigateToModel: (String) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-    var showDevicePickerSheet by remember { mutableStateOf(false) }
+    var showDevicePickerSheet by remember { mutableStateOf(value = false) }
 
     LiquidGlassBackground {
         if (state.isLoading) {
@@ -136,10 +135,12 @@ fun ModelDetailScreen(
                                     tint = if (state.isWatchlisted) AccentAzure else TextMuted
                                 )
                             }
-                            IconButton(onClick = {
-                                val intent = Intent(Intent.ACTION_VIEW, model.repoUrl.toUri())
-                                context.startActivity(intent)
-                            }) {
+                            IconButton(
+                                onClick = {
+                                    val intent = Intent(Intent.ACTION_VIEW, model.repoUrl.toUri())
+                                    context.startActivity(intent)
+                                }
+                            ) {
                                 Icon(imageVector = Icons.AutoMirrored.Filled.OpenInNew, contentDescription = "Repository", tint = TextPrimary)
                             }
                         }
@@ -539,7 +540,7 @@ private fun QualityEvidenceView(evidence: QualityEvidence) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            if (evidence.strength == EvidenceStrength.INSUFFICIENT || evidence.retentions.isEmpty()) {
+            if ((evidence.strength == EvidenceStrength.INSUFFICIENT) || evidence.retentions.isEmpty()) {
                 Text(
                     text = "Insufficient quality evidence found for this quantization on Hugging Face.",
                     fontSize = 12.sp,
@@ -584,7 +585,7 @@ private fun QualityEvidenceView(evidence: QualityEvidence) {
 private fun SpecBox(
     title: String,
     value: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     GlassCard(
         modifier = modifier,
