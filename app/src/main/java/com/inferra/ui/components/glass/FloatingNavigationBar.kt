@@ -35,7 +35,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
@@ -59,9 +58,9 @@ fun FloatingNavigationBar(
     items: List<NavItem>,
     currentRoute: String?,
     onNavigate: (String) -> Unit,
+    modifier: Modifier = Modifier,
     scrollState: NavigationScrollState = rememberNavigationScrollState(),
     gestureState: NavigationGestureState = rememberNavigationGestureState(),
-    modifier: Modifier = Modifier,
 ) {
     val capabilityState by rememberLiquidGlassCapability()
     val scope = rememberCoroutineScope()
