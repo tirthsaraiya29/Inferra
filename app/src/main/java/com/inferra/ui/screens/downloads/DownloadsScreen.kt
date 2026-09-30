@@ -175,6 +175,60 @@ fun DownloadsScreen(
 
                 item {
                     Spacer(modifier = Modifier.height(10.dp))
+                    Text(text = "Installed Local Models (${state.installedLocalModels.size})", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                }
+
+                if (state.installedLocalModels.isEmpty()) {
+                    item {
+                        GlassCard(modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                text = "No local model files downloaded yet.",
+                                color = TextMuted,
+                                fontSize = 13.sp,
+                                modifier = Modifier.padding(18.dp)
+                            )
+                        }
+                    }
+                } else {
+                    items(state.installedLocalModels, key = { it.id }) { localModel ->
+                        GlassCard(modifier = Modifier.fillMaxWidth()) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(text = localModel.modelName, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                        Text(text = localModel.fileName, fontSize = 12.sp, color = TextSecondary)
+                                    }
+                                    IconButton(onClick = { viewModel.deleteLocalModel(localModel.id) }) {
+                                        Icon(imageVector = Icons.Default.Close, contentDescription = "Delete", tint = FitInsufficient)
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    GlassBadge(text = localModel.quantType, color = AccentAzure)
+                                    val sizeGb = localModel.fileSizeBytes / (1024f * 1024f * 1024f)
+                                    Text(
+                                        text = "${String.format(Locale.US, "%.1f GB", sizeGb)} • ${localModel.format}",
+                                        fontSize = 12.sp,
+                                        color = TextMuted
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(10.dp))
                     Text(text = "Paired Companions", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
                 }
 

@@ -15,6 +15,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
 import java.io.FileOutputStream
+import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
 class ModelDownloader(
@@ -29,7 +30,13 @@ class ModelDownloader(
     private val _downloadProgressFlow = MutableStateFlow<Map<String, DownloadJob>>(emptyMap())
     val downloadProgressFlow: StateFlow<Map<String, DownloadJob>> = _downloadProgressFlow.asStateFlow()
 
-    fun getDownloadDirectory(): File {
+    fun getDownloadDirectory(customPath: String? = null): File {
+        if (!customPath.isNullOrBlank()) {
+            val customDir = File(customPath)
+            if (customDir.exists() || customDir.mkdirs()) {
+                return customDir
+            }
+        }
         val dir = File(context.getExternalFilesDir(null), "models")
         if (!dir.exists()) {
             dir.mkdirs()
@@ -38,11 +45,28 @@ class ModelDownloader(
     }
 
     suspend fun startDownload(
-        job: DownloadJob
+        job: DownloadJob,
+        customStoragePath: String? = null
     ): Unit = withContext(Dispatchers.IO) {
         val url = job.manifest.sourceUrl
         val fileName = job.manifest.fileName
-        val targetFile = File(getDownloadDirectory(), fileName)
+        val targetDir = getDownloadDirectory(customStoragePath)
+        val targetFile = File(targetDir, fileName)
+
+        // Pre-flight disk space verification
+        val expectedBytes = job.manifest.expectedSizeBytes
+        val availableDiskBytes = targetDir.usableSpace
+        if (expectedBytes > 0L && availableDiskBytes > 0L && availableDiskBytes < expectedBytes) {
+            val reqGb = String.format(Locale.US, "%.1f", expectedBytes / (1024f * 1024f * 1024f))
+            val availGb = String.format(Locale.US, "%.1f", availableDiskBytes / (1024f * 1024f * 1024f))
+            updateJobProgress(
+                job.copy(
+                    status = DownloadStatus.FAILED,
+                    errorMessage = "Insufficient storage space ($reqGb GB required, $availGb GB available)"
+                )
+            )
+            return@withContext
+        }
 
         val existingBytes = if (targetFile.exists()) targetFile.length() else 0L
         val requestBuilder = Request.Builder().url(url)
@@ -81,15 +105,16 @@ class ModelDownloader(
                 return@withContext
             }
 
+            val isPartialResume = response.code == 206
             val totalContentBytes = body.contentLength()
-            val totalBytes = if (response.code == 206) existingBytes + totalContentBytes else totalContentBytes.coerceAtLeast(job.totalBytes)
+            val totalBytes = if (isPartialResume) existingBytes + totalContentBytes else totalContentBytes.coerceAtLeast(job.totalBytes)
 
-            val outputStream = FileOutputStream(targetFile, response.code == 206)
+            val outputStream = FileOutputStream(targetFile, isPartialResume)
             val inputStream = body.byteStream()
 
             val buffer = ByteArray(64 * 1024)
             var bytesRead: Int
-            var downloaded = existingBytes
+            var downloaded = if (isPartialResume) existingBytes else 0L
             var lastTime = System.currentTimeMillis()
             var bytesSinceLastTime = 0L
 
