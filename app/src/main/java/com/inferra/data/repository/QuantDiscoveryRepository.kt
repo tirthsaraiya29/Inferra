@@ -7,6 +7,8 @@ import com.inferra.data.network.HuggingFaceModelDto
 import com.inferra.domain.model.QuantizationInfo
 import com.inferra.domain.usecase.QualityEvidenceEngine
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
@@ -33,25 +35,31 @@ class QuantDiscoveryRepository(
         val parts = baseId.split("/")
         val modelName = if (parts.size > 1) parts[1] else baseId
 
-        safeLogD("Discovering quantizations dynamically from Hugging Face for model '$baseId'...")
+        safeLogD("Discovering quantizations dynamically in parallel from Hugging Face for model '$baseId'...")
 
         val reposToInspect = mutableListOf<HuggingFaceModelDto>()
         reposToInspect.add(baseModelDto)
 
-        // Search HF for related quantization repositories
+        // Search HF for related quantization repositories in parallel using async
         val searchTerms = listOf("$modelName GGUF", "$modelName AWQ", "$modelName GPTQ", "$modelName EXL2")
-        for (term in searchTerms) {
-            try {
-                val results = api.getModels(search = term, limit = 10, sort = "downloads")
-                for (dto in results) {
-                    if (isQuantizedVariantOf(dto, modelName, baseId)) {
-                        if (reposToInspect.none { it.id.equals(dto.id, ignoreCase = true) }) {
-                            reposToInspect.add(dto)
-                        }
+        val searchResults = coroutineScope {
+            searchTerms.map { term ->
+                async {
+                    try {
+                        api.getModels(search = term, limit = 10, sort = "downloads")
+                    } catch (e: Exception) {
+                        safeLogW("Failed searching HF for '$term': ${e.message}")
+                        emptyList<HuggingFaceModelDto>()
                     }
                 }
-            } catch (e: Exception) {
-                safeLogW("Failed searching HF for '$term': ${e.message}")
+            }.flatMap { it.await() }
+        }
+
+        for (dto in searchResults) {
+            if (isQuantizedVariantOf(dto, modelName, baseId)) {
+                if (reposToInspect.none { it.id.equals(dto.id, ignoreCase = true) }) {
+                    reposToInspect.add(dto)
+                }
             }
         }
 
@@ -172,7 +180,7 @@ class QuantDiscoveryRepository(
             sourceRepo = repoId,
             estimatedRamMb = ramMb,
             estimatedVramMb = vramMb,
-            relativeQualityScore = qualityEvidence.retentions.firstOrNull()?.retentionPercentage ?: 90f,
+            relativeQualityScore = qualityEvidence.retentions.firstOrNull()?.retentionPercentage ?: 0f,
             qualityEvidence = qualityEvidence
         )
     }
@@ -212,7 +220,7 @@ class QuantDiscoveryRepository(
             sourceRepo = repoId,
             estimatedRamMb = ramMb,
             estimatedVramMb = ramMb,
-            relativeQualityScore = qualityEvidence.retentions.firstOrNull()?.retentionPercentage ?: 88f,
+            relativeQualityScore = qualityEvidence.retentions.firstOrNull()?.retentionPercentage ?: 0f,
             qualityEvidence = qualityEvidence
         )
     }
