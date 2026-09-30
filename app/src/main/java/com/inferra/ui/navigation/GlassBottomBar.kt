@@ -8,18 +8,17 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.CompareArrows
-import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.DeveloperBoard
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -46,9 +45,7 @@ val bottomNavItems = listOf(
     NavItem(Screen.Search.route, "Search", Icons.Default.Search),
     NavItem(Screen.Compare.route, "Compare", Icons.AutoMirrored.Filled.CompareArrows),
     NavItem(Screen.Hardware.route, "Hardware", Icons.Default.DeveloperBoard),
-    NavItem(Screen.Downloads.route, "Downloads", Icons.Default.Download),
-    NavItem(Screen.Watchlist.route, "Saved", Icons.Default.Bookmark),
-    NavItem(Screen.Settings.route, "Settings", Icons.Default.Settings)
+    NavItem(Screen.Downloads.route, "Downloads", Icons.Default.Download)
 )
 
 @Composable
@@ -72,7 +69,7 @@ fun GlassBottomBar(
                     color = GlassBorder,
                     shape = RoundedCornerShape(22.dp)
                 )
-                .padding(vertical = 8.dp, horizontal = 4.dp)
+                .padding(vertical = 6.dp, horizontal = 4.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -85,10 +82,12 @@ fun GlassBottomBar(
 
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
                         modifier = Modifier
+                            .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .clickable { onNavigate(item.route) }
-                            .padding(horizontal = 6.dp, vertical = 4.dp)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Icon(
                             imageVector = item.icon,
@@ -99,7 +98,7 @@ fun GlassBottomBar(
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = item.label,
-                            fontSize = 9.sp,
+                            fontSize = 10.sp,
                             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                             color = tint
                         )
