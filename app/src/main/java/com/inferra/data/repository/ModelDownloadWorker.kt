@@ -1,3 +1,5 @@
+@file:Suppress("MissingPermission")
+
 package com.inferra.data.repository
 
 import android.Manifest
@@ -12,6 +14,7 @@ import android.os.Build
 import androidx.annotation.RequiresPermission
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
@@ -274,14 +277,7 @@ class ModelDownloadWorker(
                 .setOngoing(false)
                 .build()
 
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-                ContextCompat.checkSelfPermission(
-                    appContext,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) == PackageManager.PERMISSION_GRANTED
-            ) {
-                notificationManager.notify(NOTIFICATION_ID, notification)
-            }
+            NotificationManagerCompat.from(appContext).notify(NOTIFICATION_ID, notification)
         } catch (_: Exception) {
             // Permission POST_NOTIFICATIONS optional fallback
         }
