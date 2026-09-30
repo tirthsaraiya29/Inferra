@@ -8,8 +8,8 @@ import androidx.annotation.RequiresApi
 import androidx.compose.ui.graphics.asComposeRenderEffect
 
 /**
- * AGSL Shader code for True Liquid Glass optical refraction distortion,
- * 3D specular highlights, normal vector edge displacement, and rim lighting.
+ * Corrected AGSL Shader for True Liquid Glass optical refraction distortion,
+ * localized theme backdrop tinting, 3D specular edge highlights, and rim lighting.
  */
 const val LIQUID_GLASS_AGSL = """
 uniform shader composable;
@@ -19,6 +19,7 @@ uniform float refraction;
 uniform float specular;
 uniform float rimThickness;
 uniform vec3 lightDir;
+uniform vec4 themeTint;
 
 float sdRoundedBox(vec2 p, vec2 b, float r) {
     vec2 q = abs(p) - b + vec2(r);
@@ -46,14 +47,18 @@ half4 main(vec2 fragCoord) {
     }
 
     vec2 distortedUv = clamp(uv + norm, vec2(0.001), vec2(0.999));
-    half4 color = composable.eval(distortedUv * resolution);
+    half4 backdropColor = composable.eval(distortedUv * resolution);
 
-    vec3 surfaceNormal = normalize(vec3(norm * 4.0, 1.0));
-    float spec = pow(max(0.0, dot(surfaceNormal, normalize(lightDir))), 24.0) * specular;
-    float rim = (1.0 - smoothstep(-rimThickness, 0.0, d)) * 0.25;
+    // Composite theme tint over blurred/refracted backdrop
+    half4 color = mix(backdropColor, themeTint, themeTint.a);
+
+    // Compute top-left specular highlight
+    vec3 surfaceNormal = normalize(vec3(norm * 5.0, 1.0));
+    float spec = pow(max(0.0, dot(surfaceNormal, normalize(lightDir))), 28.0) * specular;
+    float rim = (1.0 - smoothstep(-rimThickness, 0.0, d)) * 0.20;
 
     color.rgb += vec3(spec + rim);
-    color.rgb = mix(color.rgb, vec3(0.06, 0.10, 0.16), 0.12);
+    color.a = clamp(color.a + 0.15, 0.0, 1.0);
 
     return color;
 }
@@ -67,19 +72,24 @@ class LiquidGlassRuntimeShader {
         widthPx: Float,
         heightPx: Float,
         cornerRadiusPx: Float,
-        refraction: Float = 0.05f,
-        specular: Float = 0.30f,
-        rimThicknessPx: Float = 16f,
-        blurRadiusPx: Float = 32f,
+        themeTintRed: Float = 0.06f,
+        themeTintGreen: Float = 0.09f,
+        themeTintBlue: Float = 0.14f,
+        themeTintAlpha: Float = 0.72f,
+        refraction: Float = 0.06f,
+        specular: Float = 0.35f,
+        rimThicknessPx: Float = 14f,
+        blurRadiusPx: Float = 12f,
     ): androidx.compose.ui.graphics.RenderEffect {
         shader.setFloatUniform("resolution", widthPx.coerceAtLeast(1f), heightPx.coerceAtLeast(1f))
         shader.setFloatUniform("cornerRadius", cornerRadiusPx)
         shader.setFloatUniform("refraction", refraction)
         shader.setFloatUniform("specular", specular)
         shader.setFloatUniform("rimThickness", rimThicknessPx)
-        shader.setFloatUniform("lightDir", -0.3f, -0.6f, 0.74f)
+        shader.setFloatUniform("lightDir", -0.4f, -0.7f, 0.60f)
+        shader.setFloatUniform("themeTint", themeTintRed, themeTintGreen, themeTintBlue, themeTintAlpha)
 
-        // Chain hardware blur with AGSL shader effect
+        // Localized 12dp hardware blur
         val blurEffect = RenderEffect.createBlurEffect(
             blurRadiusPx,
             blurRadiusPx,
