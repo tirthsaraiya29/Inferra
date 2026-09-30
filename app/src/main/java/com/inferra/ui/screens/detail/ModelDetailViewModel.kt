@@ -136,7 +136,7 @@ class ModelDetailViewModel(
 
                 if (baseModel != null) {
                     // Dynamically discover quantized variants from Hugging Face
-                    val dto = try { HuggingFaceClient.api.getModelDetail(modelId) } catch (_: Exception) { null }
+                    val dto = try { HuggingFaceClient.api.getModelDetail(id = modelId) } catch (_: Exception) { null }
                     val discoveredQuants = if (dto != null) {
                         try {
                             quantDiscoveryRepository.discoverQuantizations(dto, baseModel.totalParamsBillion)

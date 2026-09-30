@@ -29,6 +29,7 @@ class QuantDiscoveryTest {
         // Dummy client mock that returns fake base dto
         val dummyApi = object : HuggingFaceApi {
             override suspend fun getModels(
+                token: String?,
                 search: String?,
                 pipelineTag: String?,
                 filter: String?,
@@ -42,7 +43,7 @@ class QuantDiscoveryTest {
                 return emptyList()
             }
 
-            override suspend fun getModelDetail(id: String): HuggingFaceModelDto {
+            override suspend fun getModelDetail(token: String?, id: String): HuggingFaceModelDto {
                 return fakeBaseDto
             }
         }
