@@ -259,6 +259,7 @@ class ModelDownloadWorker(
     }
 
     @SuppressLint("MissingPermission")
+    @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
     private fun updateNotification(title: String) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(
