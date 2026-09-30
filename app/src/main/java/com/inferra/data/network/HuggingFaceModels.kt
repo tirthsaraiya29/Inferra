@@ -25,7 +25,9 @@ data class HuggingFaceModelDto(
 
 @Serializable
 data class HfSiblingDto(
-    @SerialName("rfilename") val filename: String? = ""
+    @SerialName("rfilename") val filename: String? = "",
+    @SerialName("size") val size: Long? = null,
+    @SerialName("lfs") val lfs: JsonElement? = null
 )
 
 @Serializable

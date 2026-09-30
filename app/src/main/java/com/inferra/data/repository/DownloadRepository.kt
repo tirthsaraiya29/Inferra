@@ -62,6 +62,47 @@ class DownloadRepository(
         job
     }
 
+    suspend fun createLocalDeviceDownloadJob(
+        model: AiModel,
+        quantization: QuantizationInfo
+    ): DownloadJob = withContext(Dispatchers.IO) {
+        val jobId = "local-job-${System.currentTimeMillis()}"
+        val manifest = DownloadManifest(
+            modelId = model.id,
+            repository = quantization.sourceRepo.ifBlank { model.id },
+            exactRevision = "main",
+            fileName = quantization.fileName,
+            expectedSizeBytes = quantization.fileSizeBytes,
+            sourceUrl = quantization.downloadUrl,
+            targetDeviceId = "local-device",
+            requestedFormat = quantization.format,
+            createdAtEpochMs = System.currentTimeMillis()
+        )
+
+        val job = DownloadJob(
+            id = jobId,
+            modelId = model.id,
+            modelName = model.name,
+            author = model.author,
+            quantType = quantization.quantType,
+            totalBytes = quantization.fileSizeBytes,
+            downloadedBytes = 0,
+            status = DownloadStatus.QUEUED,
+            targetDeviceId = "local-device",
+            targetDeviceName = "This Android Device",
+            speedBytesPerSec = 0,
+            etaSeconds = 0,
+            manifest = manifest
+        )
+
+        downloadJobDao.insertJob(job.toEntity())
+        job
+    }
+
+    suspend fun updateJobStatus(job: DownloadJob) = withContext(Dispatchers.IO) {
+        downloadJobDao.insertJob(job.toEntity())
+    }
+
     suspend fun cancelJob(jobId: String) = withContext(Dispatchers.IO) {
         downloadJobDao.deleteJob(jobId)
     }

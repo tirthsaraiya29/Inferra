@@ -1,5 +1,6 @@
 package com.inferra.ui.screens.detail
 
+import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,12 +20,14 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,7 +44,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
+import com.inferra.domain.model.DownloadStatus
+import com.inferra.domain.model.EvidenceStrength
 import com.inferra.domain.model.FitGrade
+import com.inferra.domain.model.QualityEvidence
 import com.inferra.ui.components.GlassBadge
 import com.inferra.ui.components.GlassButton
 import com.inferra.ui.components.GlassCard
@@ -220,7 +226,7 @@ fun ModelDetailScreen(
                                     Spacer(modifier = Modifier.height(8.dp))
 
                                     Text(
-                                        text = "* Calculated based on active hardware profile. Inferra estimate.",
+                                        text = "* Calculated based on active hardware profile. Inferra memory fit estimate.",
                                         fontSize = 11.sp,
                                         color = TextMuted
                                     )
@@ -230,7 +236,68 @@ fun ModelDetailScreen(
                     }
                 }
 
-                // Level 3: Technical Specifications Overview
+                // Level 3: Active Download Progress Bar (If downloading locally)
+                state.activeLocalDownloadJob?.let { job ->
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 12.dp)
+                        ) {
+                            GlassCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                borderColor = AccentAzure
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column {
+                                            Text(
+                                                text = "Downloading ${job.manifest.fileName}",
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = TextPrimary
+                                            )
+                                            val downloadedMb = job.downloadedBytes / (1024f * 1024f)
+                                            val totalMb = job.totalBytes / (1024f * 1024f)
+                                            Text(
+                                                text = "${String.format(Locale.US, "%.1f", downloadedMb)} MB / ${String.format(Locale.US, "%.1f", totalMb)} MB • ${formatSpeed(job.speedBytesPerSec)}",
+                                                fontSize = 12.sp,
+                                                color = TextSecondary
+                                            )
+                                        }
+
+                                        IconButton(onClick = { viewModel.cancelLocalDownload(job.id) }) {
+                                            Icon(imageVector = Icons.Default.Close, contentDescription = "Cancel", tint = TextMuted)
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(10.dp))
+
+                                    val progress = if (job.totalBytes > 0) (job.downloadedBytes.toFloat() / job.totalBytes).coerceIn(0f, 1f) else 0f
+                                    LinearProgressIndicator(
+                                        progress = { progress },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        color = AccentAzure
+                                    )
+
+                                    Spacer(modifier = Modifier.height(6.dp))
+
+                                    Text(
+                                        text = if (job.status == DownloadStatus.COMPLETED) "Download Complete!" else if (job.status == DownloadStatus.FAILED) "Failed: ${job.errorMessage}" else "ETA: ${job.etaSeconds}s",
+                                        fontSize = 11.sp,
+                                        color = if (job.status == DownloadStatus.FAILED) FitInsufficient else AccentAzure
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Level 4: Technical Specifications Overview
                 item {
                     Column(
                         modifier = Modifier
@@ -269,57 +336,7 @@ fun ModelDetailScreen(
                     }
                 }
 
-                // Level 4: Verified Benchmarks
-                item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 12.dp)
-                    ) {
-                        Text(
-                            text = "Verified Benchmarks",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary
-                        )
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        if (model.benchmarks.isEmpty()) {
-                            GlassCard(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    text = "No verified benchmark data",
-                                    fontSize = 13.sp,
-                                    color = TextMuted,
-                                    modifier = Modifier.padding(16.dp)
-                                )
-                            }
-                        } else {
-                            model.benchmarks.forEach { bench ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 4.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column {
-                                        Text(text = bench.name, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
-                                        Text(text = bench.category, fontSize = 11.sp, color = TextMuted)
-                                    }
-                                    Text(
-                                        text = "${String.format(Locale.US, "%.1f", bench.score)}%",
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = AccentAzure
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Level 5: Quantizations & Download Files
+                // Level 5: Dynamic Hugging Face Quantizations & Quality Evidence
                 if (model.quantizations.isNotEmpty()) {
                     item {
                         Column(
@@ -328,7 +345,7 @@ fun ModelDetailScreen(
                                 .padding(horizontal = 20.dp, vertical = 12.dp)
                         ) {
                             Text(
-                                text = "Quantizations",
+                                text = "Discovered Quantizations (${model.quantizations.size})",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = TextPrimary
@@ -341,47 +358,83 @@ fun ModelDetailScreen(
                                 GlassCard(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(vertical = 4.dp),
+                                        .padding(vertical = 6.dp),
                                     onClick = { viewModel.selectQuantization(quant) },
                                     borderColor = if (isSelected) AccentAzure else GlassBorder
                                 ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(16.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Column(modifier = Modifier.padding(16.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Text(
+                                                        text = quant.quantType,
+                                                        fontSize = 16.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = if (isSelected) AccentAzure else TextPrimary
+                                                    )
+                                                    Spacer(modifier = Modifier.width(8.dp))
+                                                    GlassBadge(text = quant.format, color = TextMuted)
+                                                }
+
+                                                Spacer(modifier = Modifier.height(4.dp))
+
                                                 Text(
-                                                    text = quant.quantType,
-                                                    fontSize = 15.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = if (isSelected) AccentAzure else TextPrimary
+                                                    text = "File: ${quant.fileName}",
+                                                    fontSize = 12.sp,
+                                                    color = TextSecondary
                                                 )
-                                                Spacer(modifier = Modifier.width(8.dp))
-                                                GlassBadge(text = quant.format, color = TextMuted)
+
+                                                if (quant.sourceRepo.isNotBlank()) {
+                                                    Text(
+                                                        text = "Repo: ${quant.sourceRepo}",
+                                                        fontSize = 11.sp,
+                                                        color = TextMuted
+                                                    )
+                                                }
+
+                                                Spacer(modifier = Modifier.height(4.dp))
+
+                                                Text(
+                                                    text = "${formatBytes(quant.fileSizeBytes)} • Estimated RAM: ~${quant.estimatedRamMb / 1024} GB",
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                    color = TextPrimary
+                                                )
                                             }
-                                            Spacer(modifier = Modifier.height(4.dp))
-                                            Text(
-                                                text = if (quant.fileSizeBytes > 0L) "${formatBytes(quant.fileSizeBytes)} • ~${quant.estimatedRamMb / 1024}GB RAM required" else "File: ${quant.fileName}",
-                                                fontSize = 12.sp,
-                                                color = TextSecondary
-                                            )
+
+                                            Column(horizontalAlignment = Alignment.End) {
+                                                GlassButton(
+                                                    onClick = {
+                                                        viewModel.selectQuantization(quant)
+                                                        viewModel.downloadToDevice(quant)
+                                                    },
+                                                    accentColor = AccentAzure
+                                                ) {
+                                                    Icon(imageVector = Icons.Default.Download, contentDescription = "Download", modifier = Modifier.height(14.dp))
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Text(text = "Download", fontSize = 12.sp)
+                                                }
+
+                                                Spacer(modifier = Modifier.height(6.dp))
+
+                                                GlassButton(
+                                                    onClick = {
+                                                        viewModel.selectQuantization(quant)
+                                                        showDevicePickerSheet = true
+                                                    }
+                                                ) {
+                                                    Text(text = "Send to PC", fontSize = 11.sp, color = TextMuted)
+                                                }
+                                            }
                                         }
 
-                                        GlassButton(
-                                            onClick = {
-                                                viewModel.selectQuantization(quant)
-                                                showDevicePickerSheet = true
-                                            },
-                                            accentColor = AccentAzure
-                                        ) {
-                                            Icon(imageVector = Icons.Default.Download, contentDescription = "Send", modifier = Modifier.height(14.dp))
-                                            Spacer(modifier = Modifier.width(4.dp))
-                                            Text(text = "Send to PC", fontSize = 12.sp)
-                                        }
+                                        // Quality Evidence Section for this Quant
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        QualityEvidenceView(evidence = quant.qualityEvidence)
                                     }
                                 }
                             }
@@ -455,6 +508,79 @@ fun ModelDetailScreen(
 }
 
 @Composable
+private fun QualityEvidenceView(evidence: QualityEvidence) {
+    GlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        backgroundColor = InkCard,
+        shape = RoundedCornerShape(10.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Model Quality Evidence",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+
+                val (badgeLabel, badgeColor) = when (evidence.strength) {
+                    EvidenceStrength.STRONG -> Pair("Strong Evidence", FitExcellent)
+                    EvidenceStrength.MODERATE -> Pair("Moderate Evidence", AccentAzure)
+                    EvidenceStrength.LIMITED -> Pair("Limited Evidence", FitBorderline)
+                    EvidenceStrength.INSUFFICIENT -> Pair("Insufficient Evidence", TextMuted)
+                }
+
+                GlassBadge(text = badgeLabel, color = badgeColor)
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (evidence.strength == EvidenceStrength.INSUFFICIENT || evidence.retentions.isEmpty()) {
+                Text(
+                    text = "Insufficient quality evidence found for this quantization on Hugging Face.",
+                    fontSize = 12.sp,
+                    color = TextMuted
+                )
+            } else {
+                evidence.retentions.forEach { ret ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 2.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "${ret.benchmarkName} retention:",
+                            fontSize = 12.sp,
+                            color = TextSecondary
+                        )
+                        Text(
+                            text = "${String.format(Locale.US, "%.1f", ret.retentionPercentage)}%",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (ret.retentionPercentage >= 95f) FitExcellent else if (ret.retentionPercentage >= 85f) FitBorderline else FitInsufficient
+                        )
+                    }
+                }
+
+                if (evidence.sourceUrl.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Source: ${evidence.sourceRepo} • Baseline: ${evidence.comparisonBaseline}",
+                        fontSize = 10.sp,
+                        color = TextMuted
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun SpecBox(
     title: String,
     value: String,
@@ -477,6 +603,12 @@ private fun SpecBox(
 }
 
 private fun formatBytes(bytes: Long): String {
+    if (bytes <= 0L) return "Unknown size"
     val gb = bytes / (1024f * 1024f * 1024f)
     return String.format(Locale.US, "%.1f GB", gb)
+}
+
+private fun formatSpeed(bytesPerSec: Long): String {
+    val mbPerSec = bytesPerSec / (1024f * 1024f)
+    return String.format(Locale.US, "%.1f MB/s", mbPerSec)
 }

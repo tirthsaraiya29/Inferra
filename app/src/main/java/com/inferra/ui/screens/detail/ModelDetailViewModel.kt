@@ -2,12 +2,16 @@ package com.inferra.ui.screens.detail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.inferra.data.network.HuggingFaceClient
 import com.inferra.data.repository.CompanionRepository
 import com.inferra.data.repository.DownloadRepository
 import com.inferra.data.repository.HardwareRepository
+import com.inferra.data.repository.ModelDownloader
 import com.inferra.data.repository.ModelRepository
+import com.inferra.data.repository.QuantDiscoveryRepository
 import com.inferra.domain.model.AiModel
 import com.inferra.domain.model.DeviceTarget
+import com.inferra.domain.model.DownloadJob
 import com.inferra.domain.model.HardwareCompatibilityResult
 import com.inferra.domain.model.HardwareProfile
 import com.inferra.domain.model.QuantizationInfo
@@ -28,6 +32,7 @@ data class ModelDetailUiState(
     val isWatchlisted: Boolean = false,
     val companionDevices: List<DeviceTarget> = emptyList(),
     val sendToPcSuccessMessage: String? = null,
+    val activeLocalDownloadJob: DownloadJob? = null,
     val errorMessage: String? = null
 )
 
@@ -36,7 +41,9 @@ class ModelDetailViewModel(
     private val modelRepository: ModelRepository,
     private val hardwareRepository: HardwareRepository,
     private val downloadRepository: DownloadRepository,
-    private val companionRepository: CompanionRepository
+    private val companionRepository: CompanionRepository,
+    private val quantDiscoveryRepository: QuantDiscoveryRepository = QuantDiscoveryRepository(HuggingFaceClient.api),
+    private val modelDownloader: ModelDownloader? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ModelDetailUiState())
@@ -44,6 +51,16 @@ class ModelDetailViewModel(
 
     init {
         loadModelDetail()
+
+        // Observe active local downloads if downloader is present
+        modelDownloader?.let { downloader ->
+            viewModelScope.launch {
+                downloader.downloadProgressFlow.collect { progressMap ->
+                    val currentModelJob = progressMap.values.find { it.modelId == modelId }
+                    _uiState.update { it.copy(activeLocalDownloadJob = currentModelJob) }
+                }
+            }
+        }
     }
 
     fun selectQuantization(quant: QuantizationInfo) {
@@ -55,6 +72,28 @@ class ModelDetailViewModel(
                 selectedQuantization = quant,
                 compatibilityResult = comp
             )
+        }
+    }
+
+    fun downloadToDevice(quant: QuantizationInfo) {
+        val model = _uiState.value.model ?: return
+        viewModelScope.launch {
+            val job = downloadRepository.createLocalDeviceDownloadJob(model, quant)
+            _uiState.update {
+                it.copy(
+                    activeLocalDownloadJob = job,
+                    sendToPcSuccessMessage = "Started direct download of ${quant.fileName}"
+                )
+            }
+            modelDownloader?.startDownload(job)
+        }
+    }
+
+    fun cancelLocalDownload(jobId: String) {
+        modelDownloader?.cancelDownload(jobId)
+        viewModelScope.launch {
+            downloadRepository.cancelJob(jobId)
+            _uiState.update { it.copy(activeLocalDownloadJob = null) }
         }
     }
 
@@ -90,18 +129,34 @@ class ModelDetailViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             try {
-                val model = modelRepository.getModelById(modelId)
+                val baseModel = modelRepository.getModelById(modelId)
                 val profile = hardwareRepository.getActiveProfile()
                 val watchlisted = modelRepository.isWatchlisted(modelId).first()
                 val companions = companionRepository.devicesFlow.first()
 
-                if (model != null) {
-                    val primaryQuant = model.quantizations.firstOrNull()
-                    val comp = HardwareFitCalculator.calculate(model, primaryQuant, profile)
+                if (baseModel != null) {
+                    // Dynamically discover quantized variants from Hugging Face
+                    val dto = try { HuggingFaceClient.api.getModelDetail(modelId) } catch (_: Exception) { null }
+                    val discoveredQuants = if (dto != null) {
+                        try {
+                            quantDiscoveryRepository.discoverQuantizations(dto, baseModel.totalParamsBillion)
+                        } catch (_: Exception) {
+                            baseModel.quantizations
+                        }
+                    } else {
+                        baseModel.quantizations
+                    }
+
+                    val finalQuants = if (discoveredQuants.isNotEmpty()) discoveredQuants else baseModel.quantizations
+                    val enrichedModel = baseModel.copy(quantizations = finalQuants)
+
+                    val primaryQuant = finalQuants.firstOrNull()
+                    val comp = HardwareFitCalculator.calculate(enrichedModel, primaryQuant, profile)
+
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            model = model,
+                            model = enrichedModel,
                             activeHardwareProfile = profile,
                             selectedQuantization = primaryQuant,
                             compatibilityResult = comp,

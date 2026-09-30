@@ -1,8 +1,8 @@
 package com.inferra.data.repository
 
-import android.app.ActivityManager
 import android.content.Context
 import android.os.Build
+import com.inferra.data.hardware.HardwareDetector
 import com.inferra.data.local.HardwareProfileDao
 import com.inferra.data.local.HardwareProfileEntity
 import com.inferra.domain.model.DeviceType
@@ -37,29 +37,7 @@ class HardwareRepository(
 
     fun detectLocalAndroidHardware(): HardwareProfile {
         return try {
-            val actManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
-            val memInfo = ActivityManager.MemoryInfo()
-            actManager?.getMemoryInfo(memInfo)
-
-            val totalRamGb = if (memInfo.totalMem > 0) (memInfo.totalMem / (1024f * 1024f * 1024f)) else 8.0f
-            val mfrRaw = Build.MANUFACTURER ?: "Android"
-            val mfr = if (mfrRaw.isNotEmpty()) mfrRaw.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.US) else it.toString() } else "Android"
-            val model = Build.MODEL ?: "Device"
-            val deviceModel = "$mfr $model"
-
-            HardwareProfile(
-                id = "profile-local-detected",
-                name = deviceModel,
-                deviceType = DeviceType.LOCAL_ANDROID,
-                cpuName = Build.HARDWARE ?: "ARM64 CPU",
-                gpuName = "Mobile GPU",
-                vramGb = 0f,
-                ramGb = totalRamGb,
-                osName = "Android ${Build.VERSION.RELEASE ?: "15"} (API ${Build.VERSION.SDK_INT})",
-                preferredRuntime = "llama.cpp (Vulkan)",
-                availableStorageGb = 64f,
-                isLocalDevice = true
-            )
+            HardwareDetector(context).detectHardware()
         } catch (_: Exception) {
             HardwareProfile(
                 id = "profile-local-fallback",

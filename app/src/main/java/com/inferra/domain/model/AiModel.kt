@@ -30,9 +30,11 @@ data class QuantizationInfo(
     val fileSizeBytes: Long,
     val downloadUrl: String,
     val fileName: String,
+    val sourceRepo: String = "",
     val estimatedRamMb: Int,
     val estimatedVramMb: Int,
-    val relativeQualityScore: Float // 0.0 to 100.0
+    val relativeQualityScore: Float, // 0.0 to 100.0
+    val qualityEvidence: QualityEvidence = QualityEvidence()
 )
 
 data class BenchmarkScore(

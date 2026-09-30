@@ -20,7 +20,9 @@ import com.inferra.data.network.HuggingFaceClient
 import com.inferra.data.repository.CompanionRepository
 import com.inferra.data.repository.DownloadRepository
 import com.inferra.data.repository.HardwareRepository
+import com.inferra.data.repository.ModelDownloader
 import com.inferra.data.repository.ModelRepository
+import com.inferra.data.repository.QuantDiscoveryRepository
 import com.inferra.ui.screens.compare.CompareScreen
 import com.inferra.ui.screens.compare.CompareViewModel
 import com.inferra.ui.screens.detail.ModelDetailScreen
@@ -51,6 +53,8 @@ fun InferraNavHost(
     val hardwareRepository = remember { HardwareRepository(context, db.hardwareProfileDao()) }
     val downloadRepository = remember { DownloadRepository(db.downloadJobDao()) }
     val companionRepository = remember { CompanionRepository(db.deviceTargetDao()) }
+    val quantDiscoveryRepository = remember { QuantDiscoveryRepository(HuggingFaceClient.api) }
+    val modelDownloader = remember { ModelDownloader(context) }
 
     // Shared ViewModels
     val discoveryViewModel = remember { DiscoveryViewModel(modelRepository, hardwareRepository) }
@@ -109,7 +113,15 @@ fun InferraNavHost(
                 val modelId = try { URLDecoder.decode(rawModelId, "UTF-8") } catch (_: Exception) { rawModelId }
 
                 val detailViewModel = remember(modelId) {
-                    ModelDetailViewModel(modelId, modelRepository, hardwareRepository, downloadRepository, companionRepository)
+                    ModelDetailViewModel(
+                        modelId = modelId,
+                        modelRepository = modelRepository,
+                        hardwareRepository = hardwareRepository,
+                        downloadRepository = downloadRepository,
+                        companionRepository = companionRepository,
+                        quantDiscoveryRepository = quantDiscoveryRepository,
+                        modelDownloader = modelDownloader
+                    )
                 }
 
                 ModelDetailScreen(
