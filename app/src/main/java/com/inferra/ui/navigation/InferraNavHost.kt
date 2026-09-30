@@ -1,5 +1,8 @@
 package com.inferra.ui.navigation
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -190,7 +193,12 @@ fun InferraNavHost(
                 }
             }
 
-            if (!isDetailRoute) {
+            AnimatedVisibility(
+                visible = !isDetailRoute,
+                enter = slideInVertically(animationSpec = tween(300)) { it },
+                exit = slideOutVertically(animationSpec = tween(300)) { it },
+                modifier = Modifier.align(Alignment.BottomCenter)
+            ) {
                 GlassBottomBar(
                     currentRoute = currentRoute?.split("?")?.get(0),
                     onNavigate = { route ->
@@ -204,8 +212,7 @@ fun InferraNavHost(
                         }
                     },
                     scrollState = scrollState,
-                    gestureState = gestureState,
-                    modifier = Modifier.align(Alignment.BottomCenter)
+                    gestureState = gestureState
                 )
             }
         }

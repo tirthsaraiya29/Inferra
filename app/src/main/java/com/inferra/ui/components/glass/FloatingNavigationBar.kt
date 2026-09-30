@@ -5,7 +5,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.ui.semantics.onClick
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -105,7 +105,7 @@ fun FloatingNavigationBar(
             .padding(bottom = navBarPaddingBottom)
             .onGloballyPositioned { barWidthPx = it.size.width.toFloat() }
     ) {
-        // Floating Glass Surface Container
+        // Floating Glass Background
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -144,6 +144,14 @@ fun FloatingNavigationBar(
                     color = GlassBorder,
                     shape = RoundedCornerShape(32.dp)
                 )
+        )
+        
+        // Interactive Content Container
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(animatedHeightDp)
+                .clip(RoundedCornerShape(32.dp))
                 .directManipulationGesture(
                     gestureState = gestureState,
                     scrollState = scrollState,
@@ -223,15 +231,13 @@ fun FloatingNavigationBar(
                                 role = Role.Tab
                                 selected = isSelected
                                 contentDescription = item.label
-                            }
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) {
-                                gestureState.selectedIndex = idx
-                                gestureState.candidateIndex = idx
-                                gestureState.updateSelectedIndex(idx, scope, itemWidthPx)
-                                onNavigate(item.route)
+                                onClick {
+                                    gestureState.selectedIndex = idx
+                                    gestureState.candidateIndex = idx
+                                    gestureState.updateSelectedIndex(idx, scope, itemWidthPx)
+                                    onNavigate(item.route)
+                                    true
+                                }
                             },
                         contentAlignment = Alignment.Center
                     ) {
@@ -253,7 +259,7 @@ fun FloatingNavigationBar(
                                 Spacer(modifier = Modifier.height((2f * labelAlpha).dp))
                                 Text(
                                     text = item.label,
-                                    fontSize = (10f * labelAlpha).sp,
+                                    fontSize = 10.sp,
                                     fontWeight = if (isSelected || isCandidate) FontWeight.SemiBold else FontWeight.Normal,
                                     color = tint,
                                     modifier = Modifier.graphicsLayer { alpha = labelAlpha }

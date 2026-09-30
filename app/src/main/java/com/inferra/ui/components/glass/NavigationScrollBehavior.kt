@@ -32,6 +32,9 @@ class NavigationScrollState(
     fun onScroll(consumedDy: Float, scope: CoroutineScope) {
         if (isGestureActive) return // Suspend scroll minimization while direct manipulation gesture is active
 
+        if ((consumedDy > 0 && accumulatedDelta < 0) || (consumedDy < 0 && accumulatedDelta > 0)) {
+            accumulatedDelta = 0.0f
+        }
         accumulatedDelta += consumedDy
 
         if (accumulatedDelta < -hysteresisThresholdPx) {
@@ -78,8 +81,9 @@ class NavigationNestedScrollConnection(
 ) : NestedScrollConnection {
 
     override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-        // Delta dy: negative means scrolling down (content moves up), positive means scrolling up
-        if (source == NestedScrollSource.UserInput) {
+        // We only use UserInput/Drag to avoid programmatic scrolls minimizing the bar.
+        // We check toString to be compatible across different Compose versions.
+        if (source.toString() == "Drag" || source.toString() == "UserInput") {
             scrollState.onScroll(available.y, scope)
         }
         return Offset.Zero
@@ -90,9 +94,6 @@ class NavigationNestedScrollConnection(
         available: Offset,
         source: NestedScrollSource,
     ): Offset {
-        if (source == NestedScrollSource.UserInput) {
-            scrollState.onScroll(consumed.y, scope)
-        }
         return Offset.Zero
     }
 }

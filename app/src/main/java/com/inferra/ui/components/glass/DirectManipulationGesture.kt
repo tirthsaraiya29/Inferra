@@ -58,8 +58,16 @@ fun Modifier.directManipulationGesture(
                         isReducedMotion = isReducedMotion
                     )
                 } else {
-                    // Quick tap released -> Cancel drag mode, tap handler executes navigation
-                    gestureState.onCancel(itemWidthPx, scope)
+                    // Quick tap released -> compute candidate from touch position and navigate
+                    val targetIndex = (currentX / itemWidthPx).toInt().coerceIn(0, itemCount - 1)
+                    gestureState.candidateIndex = targetIndex
+                    dragEvent.consume()
+                    gestureState.onRelease(
+                        itemWidthPx = itemWidthPx,
+                        onNavigateToIndex = onNavigateToIndex,
+                        scope = scope,
+                        isReducedMotion = isReducedMotion
+                    )
                 }
                 break
             } else {
