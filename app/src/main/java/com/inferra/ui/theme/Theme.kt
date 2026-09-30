@@ -1,11 +1,11 @@
 package com.inferra.ui.theme
 
 import android.app.Activity
+import android.graphics.Color
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
@@ -34,9 +34,11 @@ fun InferraTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = InkBg.toArgb()
-            window.navigationBarColor = InkBg.toArgb()
+            // Set system bars transparent so content extends behind status bar and floating glass bar
+            window.statusBarColor = Color.TRANSPARENT
+            window.navigationBarColor = Color.TRANSPARENT
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+            WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = false
         }
     }
 

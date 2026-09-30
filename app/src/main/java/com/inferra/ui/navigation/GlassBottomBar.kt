@@ -1,38 +1,19 @@
 package com.inferra.ui.navigation
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material.icons.filled.DeveloperBoard
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.inferra.ui.theme.AccentAzure
-import com.inferra.ui.theme.GlassBorder
-import com.inferra.ui.theme.InkCard
-import com.inferra.ui.theme.TextMuted
+import com.inferra.ui.components.glass.FloatingNavigationBar
+import com.inferra.ui.components.glass.NavigationGestureState
+import com.inferra.ui.components.glass.NavigationScrollState
+import com.inferra.ui.components.glass.rememberNavigationGestureState
+import com.inferra.ui.components.glass.rememberNavigationScrollState
 
 data class NavItem(
     val route: String,
@@ -52,59 +33,16 @@ val bottomNavItems = listOf(
 fun GlassBottomBar(
     currentRoute: String?,
     onNavigate: (String) -> Unit,
+    scrollState: NavigationScrollState = rememberNavigationScrollState(),
+    gestureState: NavigationGestureState = rememberNavigationGestureState(),
     modifier: Modifier = Modifier
 ) {
-    Box(
+    FloatingNavigationBar(
+        items = bottomNavItems,
+        currentRoute = currentRoute,
+        onNavigate = onNavigate,
+        scrollState = scrollState,
+        gestureState = gestureState,
         modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(22.dp))
-                .background(InkCard.copy(alpha = 0.92f))
-                .border(
-                    width = 1.dp,
-                    color = GlassBorder,
-                    shape = RoundedCornerShape(22.dp)
-                )
-                .padding(vertical = 6.dp, horizontal = 4.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                bottomNavItems.forEach { item ->
-                    val isSelected = currentRoute == item.route
-                    val tint = if (isSelected) AccentAzure else TextMuted
-
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                        modifier = Modifier
-                            .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable { onNavigate(item.route) }
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Icon(
-                            imageVector = item.icon,
-                            contentDescription = item.label,
-                            tint = tint,
-                            modifier = Modifier.height(20.dp)
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = item.label,
-                            fontSize = 10.sp,
-                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                            color = tint
-                        )
-                    }
-                }
-            }
-        }
-    }
+    )
 }

@@ -7,6 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -24,6 +25,10 @@ import com.inferra.data.repository.ModelDownloader
 import com.inferra.data.repository.ModelRepository
 import com.inferra.data.repository.QuantDiscoveryRepository
 import com.inferra.data.repository.SettingsRepository
+import com.inferra.ui.components.glass.BackdropCaptureContainer
+import com.inferra.ui.components.glass.rememberNavigationGestureState
+import com.inferra.ui.components.glass.rememberNavigationNestedScrollConnection
+import com.inferra.ui.components.glass.rememberNavigationScrollState
 import com.inferra.ui.screens.compare.CompareScreen
 import com.inferra.ui.screens.compare.CompareViewModel
 import com.inferra.ui.screens.detail.ModelDetailScreen
@@ -72,115 +77,128 @@ fun InferraNavHost(
 
     val isDetailRoute = currentRoute?.startsWith("model_detail") == true
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        NavHost(
-            navController = navController,
-            startDestination = Screen.Discovery.route,
-            modifier = Modifier.fillMaxSize()
+    // Glass Navigation Scroll & Gesture State
+    val scrollState = rememberNavigationScrollState()
+    val nestedScrollConnection = rememberNavigationNestedScrollConnection(scrollState)
+    val gestureState = rememberNavigationGestureState()
+
+    BackdropCaptureContainer(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .nestedScroll(nestedScrollConnection)
         ) {
-            composable(Screen.Discovery.route) {
-                DiscoveryScreen(
-                    viewModel = discoveryViewModel,
-                    onNavigateToModel = { modelId -> navController.navigate(Screen.ModelDetail.createRoute(modelId)) },
-                    onNavigateToSearch = { query -> navController.navigate(Screen.Search.createRoute(query)) },
-                    onNavigateToHardware = { navController.navigate(Screen.Hardware.route) }
-                )
-            }
-
-            composable(
-                route = "search?q={q}",
-                arguments = listOf(navArgument("q") { type = NavType.StringType; defaultValue = "" })
-            ) { backStack ->
-                val rawQuery = backStack.arguments?.getString("q") ?: ""
-                val query = try { URLDecoder.decode(rawQuery, "UTF-8") } catch (_: Exception) { rawQuery }
-                SearchScreen(
-                    viewModel = searchViewModel,
-                    initialQuery = query,
-                    onNavigateToModel = { modelId -> navController.navigate(Screen.ModelDetail.createRoute(modelId)) }
-                )
-            }
-
-            composable(Screen.Search.route) {
-                SearchScreen(
-                    viewModel = searchViewModel,
-                    onNavigateToModel = { modelId -> navController.navigate(Screen.ModelDetail.createRoute(modelId)) }
-                )
-            }
-
-            composable(
-                route = "model_detail?id={id}",
-                arguments = listOf(navArgument("id") { type = NavType.StringType; defaultValue = "" })
-            ) { backStack ->
-                val rawModelId = backStack.arguments?.getString("id") ?: ""
-                val modelId = try { URLDecoder.decode(rawModelId, "UTF-8") } catch (_: Exception) { rawModelId }
-
-                val detailViewModel = remember(modelId) {
-                    ModelDetailViewModel(
-                        modelId = modelId,
-                        modelRepository = modelRepository,
-                        hardwareRepository = hardwareRepository,
-                        downloadRepository = downloadRepository,
-                        companionRepository = companionRepository,
-                        quantDiscoveryRepository = quantDiscoveryRepository,
-                        modelDownloader = modelDownloader
+            NavHost(
+                navController = navController,
+                startDestination = Screen.Discovery.route,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                composable(Screen.Discovery.route) {
+                    DiscoveryScreen(
+                        viewModel = discoveryViewModel,
+                        onNavigateToModel = { modelId -> navController.navigate(Screen.ModelDetail.createRoute(modelId)) },
+                        onNavigateToSearch = { query -> navController.navigate(Screen.Search.createRoute(query)) },
+                        onNavigateToHardware = { navController.navigate(Screen.Hardware.route) }
                     )
                 }
 
-                ModelDetailScreen(
-                    viewModel = detailViewModel,
-                    onBack = { navController.popBackStack() },
-                    onNavigateToModel = { newModelId -> navController.navigate(Screen.ModelDetail.createRoute(newModelId)) }
-                )
-            }
+                composable(
+                    route = "search?q={q}",
+                    arguments = listOf(navArgument("q") { type = NavType.StringType; defaultValue = "" })
+                ) { backStack ->
+                    val rawQuery = backStack.arguments?.getString("q") ?: ""
+                    val query = try { URLDecoder.decode(rawQuery, "UTF-8") } catch (_: Exception) { rawQuery }
+                    SearchScreen(
+                        viewModel = searchViewModel,
+                        initialQuery = query,
+                        onNavigateToModel = { modelId -> navController.navigate(Screen.ModelDetail.createRoute(modelId)) }
+                    )
+                }
 
-            composable(Screen.Compare.route) {
-                CompareScreen(
-                    viewModel = compareViewModel,
-                    onNavigateToModel = { modelId -> navController.navigate(Screen.ModelDetail.createRoute(modelId)) }
-                )
-            }
+                composable(Screen.Search.route) {
+                    SearchScreen(
+                        viewModel = searchViewModel,
+                        onNavigateToModel = { modelId -> navController.navigate(Screen.ModelDetail.createRoute(modelId)) }
+                    )
+                }
 
-            composable(Screen.Hardware.route) {
-                HardwareScreen(
-                    viewModel = hardwareViewModel
-                )
-            }
+                composable(
+                    route = "model_detail?id={id}",
+                    arguments = listOf(navArgument("id") { type = NavType.StringType; defaultValue = "" })
+                ) { backStack ->
+                    val rawModelId = backStack.arguments?.getString("id") ?: ""
+                    val modelId = try { URLDecoder.decode(rawModelId, "UTF-8") } catch (_: Exception) { rawModelId }
 
-            composable(Screen.Downloads.route) {
-                DownloadsScreen(
-                    viewModel = downloadsViewModel
-                )
-            }
-
-            composable(Screen.Watchlist.route) {
-                WatchlistScreen(
-                    viewModel = watchlistViewModel,
-                    onNavigateToModel = { modelId -> navController.navigate(Screen.ModelDetail.createRoute(modelId)) }
-                )
-            }
-
-            composable(Screen.Settings.route) {
-                SettingsScreen(
-                    viewModel = settingsViewModel
-                )
-            }
-        }
-
-        if (!isDetailRoute) {
-            GlassBottomBar(
-                currentRoute = currentRoute?.split("?")?.get(0),
-                onNavigate = { route ->
-                    val cleanCurrent = currentRoute?.split("?")?.get(0)
-                    if (cleanCurrent != route) {
-                        navController.navigate(route) {
-                            popUpTo(navController.graph.startDestinationId) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
+                    val detailViewModel = remember(modelId) {
+                        ModelDetailViewModel(
+                            modelId = modelId,
+                            modelRepository = modelRepository,
+                            hardwareRepository = hardwareRepository,
+                            downloadRepository = downloadRepository,
+                            companionRepository = companionRepository,
+                            quantDiscoveryRepository = quantDiscoveryRepository,
+                            modelDownloader = modelDownloader
+                        )
                     }
-                },
-                modifier = Modifier.align(Alignment.BottomCenter)
-            )
+
+                    ModelDetailScreen(
+                        viewModel = detailViewModel,
+                        onBack = { navController.popBackStack() },
+                        onNavigateToModel = { newModelId -> navController.navigate(Screen.ModelDetail.createRoute(newModelId)) }
+                    )
+                }
+
+                composable(Screen.Compare.route) {
+                    CompareScreen(
+                        viewModel = compareViewModel,
+                        onNavigateToModel = { modelId -> navController.navigate(Screen.ModelDetail.createRoute(modelId)) }
+                    )
+                }
+
+                composable(Screen.Hardware.route) {
+                    HardwareScreen(
+                        viewModel = hardwareViewModel
+                    )
+                }
+
+                composable(Screen.Downloads.route) {
+                    DownloadsScreen(
+                        viewModel = downloadsViewModel
+                    )
+                }
+
+                composable(Screen.Watchlist.route) {
+                    WatchlistScreen(
+                        viewModel = watchlistViewModel,
+                        onNavigateToModel = { modelId -> navController.navigate(Screen.ModelDetail.createRoute(modelId)) }
+                    )
+                }
+
+                composable(Screen.Settings.route) {
+                    SettingsScreen(
+                        viewModel = settingsViewModel
+                    )
+                }
+            }
+
+            if (!isDetailRoute) {
+                GlassBottomBar(
+                    currentRoute = currentRoute?.split("?")?.get(0),
+                    onNavigate = { route ->
+                        val cleanCurrent = currentRoute?.split("?")?.get(0)
+                        if (cleanCurrent != route) {
+                            navController.navigate(route) {
+                                popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    },
+                    scrollState = scrollState,
+                    gestureState = gestureState,
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                )
+            }
         }
     }
 }
