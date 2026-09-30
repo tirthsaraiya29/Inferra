@@ -15,7 +15,8 @@ data class SettingsUiState(
     val isDarkMode: Boolean = true,
     val isTelemetryEnabled: Boolean = false,
     val autoRefreshData: Boolean = true,
-    val modelStoragePath: String = ""
+    val modelStoragePath: String = "",
+    val hfToken: String = ""
 )
 
 class SettingsViewModel(
@@ -35,7 +36,8 @@ class SettingsViewModel(
                             isDarkMode = settings.isDarkMode,
                             isTelemetryEnabled = settings.isTelemetryEnabled,
                             autoRefreshData = settings.autoRefreshData,
-                            modelStoragePath = settings.modelStoragePath
+                            modelStoragePath = settings.modelStoragePath,
+                            hfToken = settings.hfToken
                         )
                     }
                 }
@@ -70,6 +72,13 @@ class SettingsViewModel(
         _uiState.update { it.copy(modelStoragePath = path) }
         viewModelScope.launch {
             settingsRepository?.setModelStoragePath(path)
+        }
+    }
+
+    fun updateHfToken(token: String) {
+        _uiState.update { it.copy(hfToken = token) }
+        viewModelScope.launch {
+            settingsRepository?.setHfToken(token)
         }
     }
 }

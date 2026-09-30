@@ -18,7 +18,8 @@ data class UserSettings(
     val isDarkMode: Boolean = true,
     val isTelemetryEnabled: Boolean = false,
     val autoRefreshData: Boolean = true,
-    val modelStoragePath: String = ""
+    val modelStoragePath: String = "",
+    val hfToken: String = ""
 )
 
 class SettingsRepository(private val context: Context) {
@@ -29,6 +30,7 @@ class SettingsRepository(private val context: Context) {
         val KEY_IS_TELEMETRY_ENABLED = booleanPreferencesKey("is_telemetry_enabled")
         val KEY_AUTO_REFRESH_DATA = booleanPreferencesKey("auto_refresh_data")
         val KEY_MODEL_STORAGE_PATH = stringPreferencesKey("model_storage_path")
+        val KEY_HF_TOKEN = stringPreferencesKey("hf_token")
     }
 
     val userSettingsFlow: Flow<UserSettings> = context.dataStore.data.map { prefs ->
@@ -37,7 +39,8 @@ class SettingsRepository(private val context: Context) {
             isDarkMode = prefs[KEY_IS_DARK_MODE] ?: true,
             isTelemetryEnabled = prefs[KEY_IS_TELEMETRY_ENABLED] ?: false,
             autoRefreshData = prefs[KEY_AUTO_REFRESH_DATA] ?: true,
-            modelStoragePath = prefs[KEY_MODEL_STORAGE_PATH] ?: ""
+            modelStoragePath = prefs[KEY_MODEL_STORAGE_PATH] ?: "",
+            hfToken = prefs[KEY_HF_TOKEN] ?: ""
         )
     }
 
@@ -62,6 +65,12 @@ class SettingsRepository(private val context: Context) {
     suspend fun setModelStoragePath(path: String) {
         context.dataStore.edit { prefs ->
             prefs[KEY_MODEL_STORAGE_PATH] = path
+        }
+    }
+
+    suspend fun setHfToken(token: String) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_HF_TOKEN] = token
         }
     }
 }

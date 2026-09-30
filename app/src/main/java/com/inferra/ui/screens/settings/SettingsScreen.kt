@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.inferra.ui.components.GlassCard
+import com.inferra.ui.components.GlassTextField
 import com.inferra.ui.components.LiquidGlassBackground
 import com.inferra.ui.theme.AccentAzure
 import com.inferra.ui.theme.FitExcellent
@@ -124,7 +125,36 @@ fun SettingsScreen(
                     }
                 }
 
-                // Section: Privacy & Telemetry
+                // Section: Hugging Face User Access Token (Gated Models)
+                item {
+                    GlassCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(20.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(imageVector = Icons.Default.Security, contentDescription = "Token", tint = AccentAzure)
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(text = "Hugging Face Access Token", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                            }
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            Text(
+                                text = "Enter your user access token (hf_...) to discover gated or private models like Llama 3.",
+                                fontSize = 12.sp,
+                                color = TextMuted
+                            )
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            GlassTextField(
+                                value = state.hfToken,
+                                onValueChange = viewModel::updateHfToken,
+                                placeholderText = "hf_..."
+                            )
+                        }
+                    }
+                }
+
+                // Section: Privacy & Diagnostics
                 item {
                     GlassCard(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(20.dp)) {
