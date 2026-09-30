@@ -1,13 +1,16 @@
 package com.inferra.data.repository
 
+import android.Manifest
 import android.R
 import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
@@ -250,6 +253,15 @@ class ModelDownloadWorker(
 
     @SuppressLint("MissingPermission")
     private fun updateNotification(title: String) {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(
+                appContext,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+
         try {
             val notification = NotificationCompat.Builder(appContext, CHANNEL_ID)
                 .setContentTitle(title)
@@ -259,7 +271,7 @@ class ModelDownloadWorker(
                 .build()
 
             notificationManager.notify(NOTIFICATION_ID, notification)
-        } catch (_: SecurityException) {
+        } catch (_: Exception) {
             // Permission POST_NOTIFICATIONS optional fallback
         }
     }
