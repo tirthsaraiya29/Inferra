@@ -20,6 +20,9 @@ import kotlinx.coroutines.launch
 data class SearchUiState(
     val query: String = "",
     val isLoading: Boolean = false,
+    val isLoadingMore: Boolean = false,
+    val currentPage: Int = 0,
+    val canLoadMore: Boolean = true,
     val searchResults: List<AiModel> = emptyList(),
     val selectedTask: ModelTask? = null,
     val maxParamsBillion: Float? = null,
@@ -75,6 +78,50 @@ class SearchViewModel(
         }
     }
 
+    fun loadNextPage() {
+        val state = _uiState.value
+        if (state.isLoading || state.isLoadingMore || !state.canLoadMore) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingMore = true) }
+            try {
+                val nextPage = state.currentPage + 1
+                val newResults = modelRepository.searchModels(
+                    query = state.query,
+                    selectedTask = state.selectedTask,
+                    maxParams = state.maxParamsBillion,
+                    isGgufOnly = state.isGgufOnly,
+                    page = nextPage
+                )
+
+                val existingIds = state.searchResults.map { it.id }.toSet()
+                val distinctNew = newResults.filter { !existingIds.contains(it.id) }
+                val combined = state.searchResults + distinctNew
+
+                val profile = state.activeHardwareProfile ?: hardwareRepository.getActiveProfile()
+                val compMap = if (profile != null) {
+                    combined.associate { model ->
+                        model.id to HardwareFitCalculator.calculate(model, model.quantizations.firstOrNull(), profile)
+                    }
+                } else {
+                    emptyMap()
+                }
+
+                _uiState.update {
+                    it.copy(
+                        isLoadingMore = false,
+                        currentPage = nextPage,
+                        canLoadMore = newResults.isNotEmpty(),
+                        searchResults = combined,
+                        compatibilityMap = compMap
+                    )
+                }
+            } catch (_: Exception) {
+                _uiState.update { it.copy(isLoadingMore = false, canLoadMore = false) }
+            }
+        }
+    }
+
     private fun loadProfileAndPerformSearch() {
         viewModelScope.launch {
             val profile = hardwareRepository.getActiveProfile()
@@ -85,14 +132,15 @@ class SearchViewModel(
 
     private fun performSearch() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update { it.copy(isLoading = true, currentPage = 0, canLoadMore = true, errorMessage = null) }
             try {
                 val state = _uiState.value
                 val results = modelRepository.searchModels(
                     query = state.query,
                     selectedTask = state.selectedTask,
                     maxParams = state.maxParamsBillion,
-                    isGgufOnly = state.isGgufOnly
+                    isGgufOnly = state.isGgufOnly,
+                    page = 0
                 )
 
                 val profile = state.activeHardwareProfile ?: hardwareRepository.getActiveProfile()
@@ -107,6 +155,7 @@ class SearchViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
+                        currentPage = 0,
                         searchResults = results,
                         compatibilityMap = compMap
                     )
