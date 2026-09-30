@@ -1,5 +1,8 @@
 package com.inferra.domain.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 enum class EvidenceStrength {
     STRONG,      // Multiple standard benchmarks (e.g. MMLU, GSM8K, HumanEval) directly compared
     MODERATE,    // 1-2 standard benchmarks compared against baseline
@@ -7,6 +10,7 @@ enum class EvidenceStrength {
     INSUFFICIENT // Insufficient quality evidence
 }
 
+@Serializable
 data class BenchmarkRetention(
     val benchmarkName: String,       // e.g. "MMLU", "GSM8K", "HumanEval", "GPQA", "ARC", "Perplexity"
     val quantScore: Float,           // e.g. 81.4
@@ -15,6 +19,7 @@ data class BenchmarkRetention(
     val isLowerBetter: Boolean = false // true for perplexity/PPL
 )
 
+@Serializable
 data class QualityEvidence(
     val retentions: List<BenchmarkRetention> = emptyList(),
     val strength: EvidenceStrength = EvidenceStrength.INSUFFICIENT,

@@ -1,28 +1,35 @@
 package com.inferra.domain.model
 
-import java.time.Instant
+import androidx.compose.runtime.Immutable
+import kotlinx.serialization.Serializable
 
 /**
  * Data provenance classification as mandated by product philosophy.
  */
+@Serializable
 enum class DataCategory {
     SOURCE_FACT,     // Directly from repository metadata
     MEASUREMENT,     // Empirical benchmark/throughput measurement
     DERIVED          // App-calculated intelligence (hardware fit, estimated speed)
 }
 
+@Serializable
 enum class Modality {
     TEXT, VISION, AUDIO, MULTIMODAL, CODE
 }
 
+@Serializable
 enum class ModelTask {
     GENERAL_TEXT, CODING, REASONING, MATH, VISION, AGENTIC, TOOL_CALLING, EMBEDDINGS
 }
 
+@Serializable
 enum class LicenseType {
     APACHE_2, MIT, LLAMA_COMMUNITY, QWEN_RESEARCH, PERMISSIVE_OTHER, RESTRICTED
 }
 
+@Immutable
+@Serializable
 data class QuantizationInfo(
     val id: String,
     val format: String,             // GGUF, AWQ, EXL2, GPTQ, FP16, BF16
@@ -37,6 +44,8 @@ data class QuantizationInfo(
     val qualityEvidence: QualityEvidence = QualityEvidence()
 )
 
+@Immutable
+@Serializable
 data class BenchmarkScore(
     val name: String,               // MMLU, HumanEval, GSM8K, MATH, LiveBench, GPQA
     val score: Float,               // e.g. 84.5
@@ -46,6 +55,8 @@ data class BenchmarkScore(
     val dataCategory: DataCategory = DataCategory.MEASUREMENT
 )
 
+@Immutable
+@Serializable
 data class CapabilityMatrix(
     val coding: Float,             // 0 to 100
     val reasoning: Float,          // 0 to 100
@@ -57,6 +68,8 @@ data class CapabilityMatrix(
     val longContext: Float         // 0 to 100
 )
 
+@Immutable
+@Serializable
 data class LineageInfo(
     val baseModelId: String? = null,
     val parentModelId: String? = null,
@@ -65,6 +78,8 @@ data class LineageInfo(
     val childModelIds: List<String> = emptyList()
 )
 
+@Immutable
+@Serializable
 data class AiModel(
     val id: String,                         // e.g. "Qwen/Qwen2.5-Coder-32B-Instruct"
     val name: String,                       // e.g. "Qwen2.5-Coder-32B-Instruct"
