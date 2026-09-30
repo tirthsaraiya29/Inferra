@@ -69,7 +69,7 @@ fun CompareScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "Compare Models",
-                            fontSize = 24.sp,
+                            fontSize = 28.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary
                         )

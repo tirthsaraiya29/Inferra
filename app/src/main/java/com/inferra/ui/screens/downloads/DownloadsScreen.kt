@@ -78,7 +78,7 @@ fun DownloadsScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "Downloads",
-                                fontSize = 24.sp,
+                                fontSize = 28.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimary
                             )
