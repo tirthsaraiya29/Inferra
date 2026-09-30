@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,10 +35,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -51,6 +52,7 @@ import com.inferra.ui.theme.AccentAzure
 import com.inferra.ui.theme.GlassBorder
 import com.inferra.ui.theme.InkCard
 import com.inferra.ui.theme.TextMuted
+import kotlin.math.abs
 
 @Composable
 fun FloatingNavigationBar(
@@ -59,10 +61,11 @@ fun FloatingNavigationBar(
     onNavigate: (String) -> Unit,
     scrollState: NavigationScrollState = rememberNavigationScrollState(),
     gestureState: NavigationGestureState = rememberNavigationGestureState(),
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val capabilityState by rememberLiquidGlassCapability()
     val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
 
     val selectedIdx = remember(currentRoute, items) {
         items.indexOfFirst { it.route == currentRoute }.coerceAtLeast(0)
@@ -81,6 +84,20 @@ fun FloatingNavigationBar(
 
     var barWidthPx by remember { mutableFloatStateOf(0f) }
     val itemWidthPx = if (items.isNotEmpty() && barWidthPx > 0f) barWidthPx / items.size else 1f
+
+    // Keep gesture state's selected index updated when in IDLE phase
+    LaunchedEffect(selectedIdx, itemWidthPx) {
+        if (gestureState.phase == NavigationGesturePhase.IDLE && itemWidthPx > 1f) {
+            gestureState.updateSelectedIndex(selectedIdx, scope, itemWidthPx)
+        }
+    }
+
+    // Determine optical surface tint based on active theme
+    val surfaceColor = MaterialTheme.colorScheme.surface
+    val themeTintRed = surfaceColor.red
+    val themeTintGreen = surfaceColor.green
+    val themeTintBlue = surfaceColor.blue
+    val themeTintAlpha = 0.75f
 
     Box(
         modifier = modifier
@@ -105,17 +122,21 @@ fun FloatingNavigationBar(
                                         widthPx = size.width,
                                         heightPx = size.height,
                                         cornerRadiusPx = 32.dp.toPx(),
-                                        refraction = 0.05f,
+                                        themeTintRed = themeTintRed,
+                                        themeTintGreen = themeTintGreen,
+                                        themeTintBlue = themeTintBlue,
+                                        themeTintAlpha = themeTintAlpha,
+                                        refraction = 0.06f,
                                         specular = 0.35f,
-                                        rimThicknessPx = 16f,
-                                        blurRadiusPx = 28f
+                                        rimThicknessPx = 14f,
+                                        blurRadiusPx = 12f
                                     )
                                 }
                             } else {
-                                Modifier.background(InkCard.copy(alpha = 0.88f))
+                                Modifier.background(InkCard.copy(alpha = 0.85f))
                             }
                         }
-                        LiquidGlassTier.REDUCED -> Modifier.background(InkCard.copy(alpha = 0.90f))
+                        LiquidGlassTier.REDUCED -> Modifier.background(InkCard.copy(alpha = 0.88f))
                         LiquidGlassTier.BASIC -> Modifier.background(InkCard.copy(alpha = 0.96f))
                     }
                 )
@@ -138,6 +159,31 @@ fun FloatingNavigationBar(
                     isReducedMotion = capabilityState.isReducedMotionEnabled
                 )
         ) {
+            // SINGLE CONTINUOUS LIQUID SELECTION CAPSULE
+            if (barWidthPx > 0f && items.isNotEmpty()) {
+                val capsuleTargetCenterX = if (gestureState.phase == NavigationGesturePhase.IDLE) {
+                    selectedIdx * itemWidthPx + itemWidthPx * 0.5f
+                } else {
+                    gestureState.capsuleCenterX.value
+                }
+
+                val rawCapsuleWidthPx = itemWidthPx * 0.82f * gestureState.capsuleStretchRatio.value
+                val capsuleWidthDp = with(density) { rawCapsuleWidthPx.toDp() }
+                val capsuleHeightDp = (38f - 10f * minimizedFraction).dp * gestureState.capsuleSquishY.value
+                val capsuleLeftPx = capsuleTargetCenterX - rawCapsuleWidthPx * 0.5f
+
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .graphicsLayer { translationX = capsuleLeftPx }
+                        .width(capsuleWidthDp)
+                        .height(capsuleHeightDp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(AccentAzure.copy(alpha = 0.22f))
+                        .border(0.8.dp, AccentAzure.copy(alpha = 0.50f), RoundedCornerShape(20.dp))
+                )
+            }
+
             // Interactive Tab Items Row
             Row(
                 modifier = Modifier
@@ -150,13 +196,24 @@ fun FloatingNavigationBar(
                     val isSelected = selectedIdx == idx
                     val isCandidate = gestureState.candidateIndex == idx
 
+                    // Proximity highlight interpolation based on continuous liquid capsule center X
+                    val itemCenterX = idx * itemWidthPx + itemWidthPx * 0.5f
+                    val currentCapsuleX = if (gestureState.phase == NavigationGesturePhase.IDLE) {
+                        selectedIdx * itemWidthPx + itemWidthPx * 0.5f
+                    } else {
+                        gestureState.capsuleCenterX.value
+                    }
+
+                    val distanceFromCapsule = abs(currentCapsuleX - itemCenterX)
+                    val proximityFactor = (1.0f - (distanceFromCapsule / itemWidthPx)).coerceIn(0f, 1f)
+
                     val itemAlpha by animateFloatAsState(
-                        targetValue = if (isSelected || isCandidate) 1.0f else 0.65f,
+                        targetValue = if (isSelected || isCandidate) 1.0f else (0.55f + 0.35f * proximityFactor),
                         animationSpec = spring(),
                         label = "tabAlpha"
                     )
 
-                    val tint = if (isSelected || isCandidate) AccentAzure else TextMuted
+                    val tint = if (isSelected || isCandidate || proximityFactor > 0.5f) AccentAzure else TextMuted
 
                     Box(
                         modifier = Modifier
@@ -174,23 +231,11 @@ fun FloatingNavigationBar(
                             ) {
                                 gestureState.selectedIndex = idx
                                 gestureState.candidateIndex = idx
+                                gestureState.updateSelectedIndex(idx, scope, itemWidthPx)
                                 onNavigate(item.route)
                             },
                         contentAlignment = Alignment.Center
                     ) {
-                        // Capsule highlight under active/candidate item
-                        if (isSelected || isCandidate) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth(0.85f)
-                                    .height((38f - 10f * minimizedFraction).dp)
-                                    .scale(if (gestureState.phase == NavigationGesturePhase.DRAGGING) gestureState.capsuleScaleX.value else 1.0f)
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .background(AccentAzure.copy(alpha = if (isSelected) 0.20f else 0.10f))
-                                    .border(0.5.dp, AccentAzure.copy(alpha = 0.40f), RoundedCornerShape(20.dp))
-                            )
-                        }
-
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
@@ -210,7 +255,7 @@ fun FloatingNavigationBar(
                                 Text(
                                     text = item.label,
                                     fontSize = (10f * labelAlpha).sp,
-                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                    fontWeight = if (isSelected || isCandidate) FontWeight.SemiBold else FontWeight.Normal,
                                     color = tint,
                                     modifier = Modifier.graphicsLayer { alpha = labelAlpha }
                                 )

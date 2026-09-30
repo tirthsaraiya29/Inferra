@@ -11,8 +11,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlin.math.abs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -26,17 +26,20 @@ enum class NavigationGesturePhase {
 
 @Stable
 class NavigationGestureState(
-    initialSelectedIndex: Int = 0
+    initialSelectedIndex: Int = 0,
 ) {
     var phase by mutableStateOf(NavigationGesturePhase.IDLE)
     var selectedIndex by mutableIntStateOf(initialSelectedIndex)
     var candidateIndex by mutableIntStateOf(initialSelectedIndex)
 
-    // Animated capsule center position X along the bar
-    val capsuleOffsetX: Animatable<Float, AnimationVector1D> = Animatable(0f)
+    // Continuous liquid capsule center X along the bar
+    val capsuleCenterX: Animatable<Float, AnimationVector1D> = Animatable(0f)
 
-    // Animated capsule scale/press compression
-    val capsuleScaleX: Animatable<Float, AnimationVector1D> = Animatable(1.0f)
+    // Slime liquid stretch ratio (1.0f = normal pill, 1.35f = elongated during drag)
+    val capsuleStretchRatio: Animatable<Float, AnimationVector1D> = Animatable(1.0f)
+
+    // Slime liquid squish Y (1.0f = normal height, 0.88f = compressed)
+    val capsuleSquishY: Animatable<Float, AnimationVector1D> = Animatable(1.0f)
 
     val mutatorMutex = MutatorMutex()
 
@@ -46,7 +49,9 @@ class NavigationGestureState(
             candidateIndex = index
             scope.launch {
                 mutatorMutex.mutate {
-                    capsuleOffsetX.snapTo(index * itemWidthPx)
+                    capsuleCenterX.snapTo(index * itemWidthPx + itemWidthPx * 0.5f)
+                    capsuleStretchRatio.snapTo(1.0f)
+                    capsuleSquishY.snapTo(1.0f)
                 }
             }
         }
@@ -59,9 +64,9 @@ class NavigationGestureState(
 
         scope.launch {
             mutatorMutex.mutate {
-                capsuleOffsetX.snapTo(initialX)
-                capsuleScaleX.animateTo(
-                    0.92f,
+                capsuleCenterX.snapTo(initialX)
+                capsuleSquishY.animateTo(
+                    0.88f,
                     spring(stiffness = Spring.StiffnessHigh)
                 )
             }
@@ -73,20 +78,25 @@ class NavigationGestureState(
         currentX: Float,
         itemWidthPx: Float,
         itemCount: Int,
-        scope: CoroutineScope
+        scope: CoroutineScope,
     ) {
         phase = NavigationGesturePhase.DRAGGING
 
-        val newCapsuleX = (currentX + dragAmountX).coerceIn(0f, (itemCount - 1) * itemWidthPx)
+        val totalWidthPx = itemCount * itemWidthPx
+        val newCenterX = (currentX + dragAmountX).coerceIn(itemWidthPx * 0.5f, totalWidthPx - itemWidthPx * 0.5f)
 
-        // Calculate new candidate index based on touch position
-        val newCandidate = (newCapsuleX / itemWidthPx + 0.5f).toInt().coerceIn(0, itemCount - 1)
+        // Dynamically compute candidate index based on touch center position
+        val newCandidate = (newCenterX / itemWidthPx).toInt().coerceIn(0, itemCount - 1)
         candidateIndex = newCandidate
+
+        // Liquid stretch deformation based on drag speed/distance
+        val targetStretch = (1.0f + (abs(dragAmountX) / 12f).coerceIn(0f, 0.35f))
 
         scope.launch {
             mutatorMutex.mutate {
-                capsuleOffsetX.snapTo(newCapsuleX)
-                capsuleScaleX.snapTo(1.08f) // Subtle stretch during drag
+                capsuleCenterX.snapTo(newCenterX)
+                capsuleStretchRatio.snapTo(targetStretch)
+                capsuleSquishY.snapTo(0.92f)
             }
         }
     }
@@ -95,22 +105,41 @@ class NavigationGestureState(
         itemWidthPx: Float,
         onNavigateToIndex: (Int) -> Unit,
         scope: CoroutineScope,
-        isReducedMotion: Boolean = false
+        isReducedMotion: Boolean = false,
     ) {
         val targetIdx = candidateIndex
-        val targetX = targetIdx * itemWidthPx
+        val targetCenterX = targetIdx * itemWidthPx + itemWidthPx * 0.5f
 
         phase = NavigationGesturePhase.COMMITTING
 
         scope.launch {
             mutatorMutex.mutate {
                 if (isReducedMotion) {
-                    capsuleOffsetX.snapTo(targetX)
-                    capsuleScaleX.snapTo(1.0f)
+                    capsuleCenterX.snapTo(targetCenterX)
+                    capsuleStretchRatio.snapTo(1.0f)
+                    capsuleSquishY.snapTo(1.0f)
                 } else {
-                    capsuleScaleX.animateTo(1.0f, spring(stiffness = Spring.StiffnessMedium))
-                    capsuleOffsetX.animateTo(
-                        targetX,
+                    // Viscous liquid spring settling animation
+                    launch {
+                        capsuleStretchRatio.animateTo(
+                            1.0f,
+                            spring(
+                                stiffness = Spring.StiffnessMedium,
+                                dampingRatio = Spring.DampingRatioMediumBouncy
+                            )
+                        )
+                    }
+                    launch {
+                        capsuleSquishY.animateTo(
+                            1.0f,
+                            spring(
+                                stiffness = Spring.StiffnessMedium,
+                                dampingRatio = Spring.DampingRatioMediumBouncy
+                            )
+                        )
+                    }
+                    capsuleCenterX.animateTo(
+                        targetCenterX,
                         spring(
                             stiffness = Spring.StiffnessLow,
                             dampingRatio = Spring.DampingRatioMediumBouncy
@@ -126,14 +155,15 @@ class NavigationGestureState(
     }
 
     fun onCancel(itemWidthPx: Float, scope: CoroutineScope) {
-        val originalX = selectedIndex * itemWidthPx
+        val originalCenterX = selectedIndex * itemWidthPx + itemWidthPx * 0.5f
         phase = NavigationGesturePhase.SPRING_BACK
         candidateIndex = selectedIndex
 
         scope.launch {
             mutatorMutex.mutate {
-                capsuleScaleX.animateTo(1.0f, spring(stiffness = Spring.StiffnessMedium))
-                capsuleOffsetX.animateTo(originalX, spring(stiffness = Spring.StiffnessLow))
+                launch { capsuleStretchRatio.animateTo(1.0f, spring(stiffness = Spring.StiffnessMedium)) }
+                launch { capsuleSquishY.animateTo(1.0f, spring(stiffness = Spring.StiffnessMedium)) }
+                capsuleCenterX.animateTo(originalCenterX, spring(stiffness = Spring.StiffnessLow))
                 phase = NavigationGesturePhase.IDLE
             }
         }
@@ -142,7 +172,7 @@ class NavigationGestureState(
 
 @Composable
 fun rememberNavigationGestureState(
-    initialSelectedIndex: Int = 0
+    initialSelectedIndex: Int = 0,
 ): NavigationGestureState {
     return remember { NavigationGestureState(initialSelectedIndex) }
 }

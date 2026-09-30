@@ -15,7 +15,7 @@ fun Modifier.directManipulationGesture(
     itemCount: Int,
     scope: CoroutineScope,
     onNavigateToIndex: (Int) -> Unit,
-    isReducedMotion: Boolean = false
+    isReducedMotion: Boolean = false,
 ): Modifier = this.pointerInput(gestureState, scrollState, itemWidthPx, itemCount, isReducedMotion) {
     awaitEachGesture {
         val down = awaitFirstDown(pass = PointerEventPass.Main, requireUnconsumed = false)
@@ -58,7 +58,7 @@ fun Modifier.directManipulationGesture(
                         isReducedMotion = isReducedMotion
                     )
                 } else {
-                    // Quick tap released
+                    // Quick tap released -> Cancel drag mode, tap handler executes navigation
                     gestureState.onCancel(itemWidthPx, scope)
                 }
                 break
