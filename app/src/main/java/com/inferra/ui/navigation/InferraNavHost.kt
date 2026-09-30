@@ -23,6 +23,7 @@ import com.inferra.data.repository.HardwareRepository
 import com.inferra.data.repository.ModelDownloader
 import com.inferra.data.repository.ModelRepository
 import com.inferra.data.repository.QuantDiscoveryRepository
+import com.inferra.data.repository.SettingsRepository
 import com.inferra.ui.screens.compare.CompareScreen
 import com.inferra.ui.screens.compare.CompareViewModel
 import com.inferra.ui.screens.detail.ModelDetailScreen
@@ -55,15 +56,16 @@ fun InferraNavHost(
     val companionRepository = remember { CompanionRepository(db.deviceTargetDao()) }
     val quantDiscoveryRepository = remember { QuantDiscoveryRepository(HuggingFaceClient.api) }
     val modelDownloader = remember { ModelDownloader(context) }
+    val settingsRepository = remember { SettingsRepository(context) }
 
     // Shared ViewModels
     val discoveryViewModel = remember { DiscoveryViewModel(modelRepository, hardwareRepository) }
     val searchViewModel = remember { SearchViewModel(modelRepository, hardwareRepository) }
     val compareViewModel = remember { CompareViewModel(modelRepository, hardwareRepository) }
     val hardwareViewModel = remember { HardwareViewModel(hardwareRepository) }
-    val downloadsViewModel = remember { DownloadsViewModel(downloadRepository, companionRepository) }
+    val downloadsViewModel = remember { DownloadsViewModel(downloadRepository, companionRepository, db.localModelDao()) }
     val watchlistViewModel = remember { WatchlistViewModel(modelRepository, hardwareRepository) }
-    val settingsViewModel = remember { SettingsViewModel() }
+    val settingsViewModel = remember { SettingsViewModel(settingsRepository) }
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route

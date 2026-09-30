@@ -11,9 +11,10 @@ import androidx.room.RoomDatabase
         WatchlistEntity::class,
         DownloadJobEntity::class,
         HardwareProfileEntity::class,
-        DeviceTargetEntity::class
+        DeviceTargetEntity::class,
+        LocalModelEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -22,6 +23,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun downloadJobDao(): DownloadJobDao
     abstract fun hardwareProfileDao(): HardwareProfileDao
     abstract fun deviceTargetDao(): DeviceTargetDao
+    abstract fun localModelDao(): LocalModelDao
 
     companion object {
         @Volatile

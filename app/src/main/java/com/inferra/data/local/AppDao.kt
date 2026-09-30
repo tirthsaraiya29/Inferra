@@ -68,3 +68,18 @@ interface DeviceTargetDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertDevice(device: DeviceTargetEntity)
 }
+
+@Dao
+interface LocalModelDao {
+    @Query("SELECT * FROM local_models ORDER BY installedAtEpochMs DESC")
+    fun getAllLocalModels(): Flow<List<LocalModelEntity>>
+
+    @Query("SELECT * FROM local_models WHERE id = :id LIMIT 1")
+    suspend fun getLocalModelById(id: String): LocalModelEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertLocalModel(model: LocalModelEntity)
+
+    @Query("DELETE FROM local_models WHERE id = :id")
+    suspend fun deleteLocalModel(id: String)
+}

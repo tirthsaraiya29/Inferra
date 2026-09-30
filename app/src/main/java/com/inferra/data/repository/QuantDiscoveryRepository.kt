@@ -61,11 +61,12 @@ class QuantDiscoveryRepository(
             val repoId = repo.id
             val siblings = repo.siblings ?: emptyList()
 
-            // Process GGUF files
+            // Process GGUF files (including multipart split archives)
             val ggufSiblings = siblings.filter { it.filename?.endsWith(".gguf", ignoreCase = true) == true }
-            for (sib in ggufSiblings) {
-                val fname = sib.filename ?: continue
-                val quantInfo = parseGgufSibling(repoId, baseId, fname, sib, totalParamsBillion)
+            val splitGroups = groupSplitGgufs(ggufSiblings)
+
+            for ((baseFname, partsList) in splitGroups) {
+                val quantInfo = parseGgufGroup(repoId, baseId, baseFname, partsList, totalParamsBillion)
                 discoveredQuants.add(quantInfo)
             }
 
@@ -103,14 +104,30 @@ class QuantDiscoveryRepository(
         return isNameMatch && isQuantRepo
     }
 
-    private fun parseGgufSibling(
+    private fun groupSplitGgufs(siblings: List<HfSiblingDto>): Map<String, List<HfSiblingDto>> {
+        val map = mutableMapOf<String, MutableList<HfSiblingDto>>()
+        val splitRegex = Regex("^(.*?)(?:-\\d{5}-of-\\d{5})?\\.gguf$", RegexOption.IGNORE_CASE)
+
+        for (sib in siblings) {
+            val fname = sib.filename ?: continue
+            val match = splitRegex.find(fname)
+            val baseKey = if (match != null) "${match.groupValues[1]}.gguf" else fname
+            map.getOrPut(baseKey) { mutableListOf() }.add(sib)
+        }
+
+        return map
+    }
+
+    private fun parseGgufGroup(
         repoId: String,
         baseRepoId: String,
-        filename: String,
-        sibling: HfSiblingDto,
+        baseFilename: String,
+        siblings: List<HfSiblingDto>,
         totalParams: Float
     ): QuantizationInfo {
-        val fnameUpper = filename.uppercase(Locale.US)
+        val primarySibling = siblings.first()
+        val primaryFname = primarySibling.filename ?: baseFilename
+        val fnameUpper = baseFilename.uppercase(Locale.US)
 
         val qType = when {
             fnameUpper.contains("Q4_K_M") -> "Q4_K_M"
@@ -127,10 +144,12 @@ class QuantDiscoveryRepository(
             fnameUpper.contains("Q5_K_S") -> "Q5_K_S"
             fnameUpper.contains("FP16") -> "FP16"
             fnameUpper.contains("BF16") -> "BF16"
-            else -> filename.substringAfterLast("-").substringBefore(".gguf").ifBlank { "GGUF" }
+            else -> baseFilename.substringAfterLast("-").substringBefore(".gguf").ifBlank { "GGUF" }
         }
 
-        val sizeBytes = sibling.size ?: calculateEstimatedSizeBytes(totalParams, qType)
+        val knownTotalSize = siblings.mapNotNull { it.size }.takeIf { it.isNotEmpty() }?.sum()
+        val sizeBytes = knownTotalSize ?: calculateEstimatedSizeBytes(totalParams, qType)
+
         val ramMb = if (sizeBytes > 0L) ((sizeBytes / (1024 * 1024)) + 1200).toInt() else 0
         val vramMb = (ramMb * 0.9f).toInt()
 
@@ -141,13 +160,15 @@ class QuantDiscoveryRepository(
             readmeText = null
         )
 
+        val displayName = if (siblings.size > 1) "$baseFilename (${siblings.size} split parts)" else baseFilename
+
         return QuantizationInfo(
-            id = "$repoId#$filename",
+            id = "$repoId#$baseFilename",
             format = "GGUF",
             quantType = qType,
             fileSizeBytes = sizeBytes,
-            downloadUrl = "https://huggingface.co/$repoId/resolve/main/$filename",
-            fileName = filename,
+            downloadUrl = "https://huggingface.co/$repoId/resolve/main/$primaryFname",
+            fileName = displayName,
             sourceRepo = repoId,
             estimatedRamMb = ramMb,
             estimatedVramMb = vramMb,

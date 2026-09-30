@@ -78,3 +78,18 @@ data class DeviceTargetEntity(
     val isPaired: Boolean,
     val runtimesCsv: String
 )
+
+@Entity(tableName = "local_models")
+data class LocalModelEntity(
+    @PrimaryKey val id: String,
+    val modelId: String,
+    val modelName: String,
+    val fileName: String,
+    val filePath: String,
+    val fileSizeBytes: Long,
+    val quantType: String,
+    val format: String,
+    val sourceRepo: String,
+    val installedAtEpochMs: Long,
+    val sha256Checksum: String? = null
+)

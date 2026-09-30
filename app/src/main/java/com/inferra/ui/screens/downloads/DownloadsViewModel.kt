@@ -2,6 +2,8 @@ package com.inferra.ui.screens.downloads
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.inferra.data.local.LocalModelDao
+import com.inferra.data.local.LocalModelEntity
 import com.inferra.data.repository.CompanionRepository
 import com.inferra.data.repository.DownloadRepository
 import com.inferra.domain.model.DeviceTarget
@@ -16,12 +18,14 @@ import kotlinx.coroutines.launch
 data class DownloadsUiState(
     val jobs: List<DownloadJob> = emptyList(),
     val devices: List<DeviceTarget> = emptyList(),
+    val installedLocalModels: List<LocalModelEntity> = emptyList(),
     val selectedManifest: String? = null
 )
 
 class DownloadsViewModel(
     private val downloadRepository: DownloadRepository,
-    private val companionRepository: CompanionRepository
+    private val companionRepository: CompanionRepository,
+    private val localModelDao: LocalModelDao? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DownloadsUiState())
@@ -29,11 +33,18 @@ class DownloadsViewModel(
 
     init {
         loadData()
+        observeInstalledLocalModels()
     }
 
     fun cancelJob(jobId: String) {
         viewModelScope.launch {
             downloadRepository.cancelJob(jobId)
+        }
+    }
+
+    fun deleteLocalModel(id: String) {
+        viewModelScope.launch {
+            localModelDao?.deleteLocalModel(id)
         }
     }
 
@@ -52,6 +63,16 @@ class DownloadsViewModel(
                         jobs = jobs,
                         devices = devices
                     )
+                }
+            }
+        }
+    }
+
+    private fun observeInstalledLocalModels() {
+        localModelDao?.let { dao ->
+            viewModelScope.launch {
+                dao.getAllLocalModels().collect { localModels ->
+                    _uiState.update { it.copy(installedLocalModels = localModels) }
                 }
             }
         }
