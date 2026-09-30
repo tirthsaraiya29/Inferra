@@ -50,13 +50,13 @@ fun InferraNavHost(
     val db = remember { AppDatabase.getDatabase(context) }
 
     // Repositories
-    val modelRepository = remember { ModelRepository(HuggingFaceClient.api, db.modelDao(), db.watchlistDao()) }
+    val settingsRepository = remember { SettingsRepository(context) }
+    val modelRepository = remember { ModelRepository(HuggingFaceClient.api, db.modelDao(), db.watchlistDao(), settingsRepository) }
     val hardwareRepository = remember { HardwareRepository(context, db.hardwareProfileDao()) }
     val downloadRepository = remember { DownloadRepository(db.downloadJobDao()) }
     val companionRepository = remember { CompanionRepository(db.deviceTargetDao()) }
     val quantDiscoveryRepository = remember { QuantDiscoveryRepository(HuggingFaceClient.api) }
     val modelDownloader = remember { ModelDownloader(context) }
-    val settingsRepository = remember { SettingsRepository(context) }
 
     // Shared ViewModels
     val discoveryViewModel = remember { DiscoveryViewModel(modelRepository, hardwareRepository) }
