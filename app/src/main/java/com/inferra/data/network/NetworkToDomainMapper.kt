@@ -60,14 +60,14 @@ object NetworkToDomainMapper {
             quantizations = quantizations,
             benchmarks = emptyList(), // Real API returns empty if benchmark unverified; no fabricated benchmark generator
             capabilities = CapabilityMatrix(
-                coding = if (tasks.contains(ModelTask.CODING)) 85f else 50f,
-                reasoning = if (tasks.contains(ModelTask.REASONING)) 85f else 60f,
-                math = if (tasks.contains(ModelTask.MATH)) 85f else 50f,
-                vision = if (modalities.contains(Modality.VISION)) 85f else 0f,
-                agentic = if (tasks.contains(ModelTask.AGENTIC)) 80f else 50f,
-                toolCalling = if (tasks.contains(ModelTask.TOOL_CALLING)) 80f else 50f,
-                multilingual = 70f,
-                longContext = if (contextLen >= 32768) 85f else 50f
+                coding = if (tasks.contains(ModelTask.CODING)) 100f else 0f,
+                reasoning = if (tasks.contains(ModelTask.REASONING)) 100f else 0f,
+                math = if (tasks.contains(ModelTask.MATH)) 100f else 0f,
+                vision = if (modalities.contains(Modality.VISION)) 100f else 0f,
+                agentic = if (tasks.contains(ModelTask.AGENTIC)) 100f else 0f,
+                toolCalling = if (tasks.contains(ModelTask.TOOL_CALLING)) 100f else 0f,
+                multilingual = 0f, // 0f indicates unmeasured
+                longContext = if (contextLen >= 32768) 100f else 0f
             ),
             lineage = LineageInfo(
                 baseModelId = extractBaseModelId(dto.tags, modelNameStr, fullId)
@@ -266,14 +266,7 @@ object NetworkToDomainMapper {
                         fileName = fname,
                         estimatedRamMb = ramMb,
                         estimatedVramMb = (ramMb * 0.9f).toInt(),
-                        relativeQualityScore = when (qType) {
-                            "Q8_0" -> 99.2f
-                            "Q6_K" -> 98.0f
-                            "Q5_K_M" -> 96.5f
-                            "Q4_K_M" -> 94.0f
-                            "Q3_K_M" -> 88.0f
-                            else -> 80.0f
-                        }
+                        relativeQualityScore = 0f // 0f indicates unmeasured; populated dynamically by QualityEvidenceEngine
                     )
                 )
             }
