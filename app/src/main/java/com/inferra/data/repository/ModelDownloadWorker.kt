@@ -1,6 +1,7 @@
 package com.inferra.data.repository
 
 import android.R
+import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -20,6 +21,7 @@ import com.inferra.domain.model.DownloadStatus
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
+import java.security.MessageDigest
 
 class ModelDownloadWorker(
     private val appContext: Context,
@@ -117,7 +119,34 @@ class ModelDownloadWorker(
         downloader.startDownload(job)
 
         val finalProgress = downloader.downloadProgressFlow.value[jobId]
-        if (finalProgress != null && finalProgress.status == DownloadStatus.COMPLETED) {
+        if (finalProgress != null && finalProgress.status == DownloadStatus.COMPLETED && targetFile.exists()) {
+            val computedSha256 = try { calculateFileSha256(targetFile) } catch (_: Exception) { null }
+            val expectedSha256 = manifest.checksumSha256
+
+            if (expectedSha256 != null && computedSha256 != null && !computedSha256.equals(expectedSha256, ignoreCase = true)) {
+                targetFile.delete()
+                db.downloadJobDao().insertJob(
+                    DownloadJobEntity(
+                        id = jobId,
+                        modelId = modelId,
+                        modelName = modelName,
+                        author = author,
+                        quantType = quantType,
+                        totalBytes = expectedBytes,
+                        downloadedBytes = 0,
+                        statusStr = DownloadStatus.FAILED.name,
+                        targetDeviceId = "local-device",
+                        targetDeviceName = "This Device",
+                        speedBytesPerSec = 0,
+                        etaSeconds = 0,
+                        errorMessage = "Download corrupted: SHA-256 checksum mismatch",
+                        manifestJson = json.encodeToString(manifest)
+                    )
+                )
+                updateNotification("Download Corrupted: $fileName")
+                return Result.failure(workDataOf("error" to "Checksum mismatch"))
+            }
+
             // Update Job Status
             db.downloadJobDao().insertJob(
                 DownloadJobEntity(
@@ -133,7 +162,7 @@ class ModelDownloadWorker(
                     targetDeviceName = "This Device",
                     speedBytesPerSec = 0,
                     etaSeconds = 0,
-                    manifestJson = json.encodeToString(manifest)
+                    manifestJson = json.encodeToString(manifest.copy(checksumSha256 = computedSha256))
                 )
             )
 
@@ -149,7 +178,8 @@ class ModelDownloadWorker(
                     quantType = quantType,
                     format = format,
                     sourceRepo = sourceRepo,
-                    installedAtEpochMs = System.currentTimeMillis()
+                    installedAtEpochMs = System.currentTimeMillis(),
+                    sha256Checksum = computedSha256
                 )
             )
 
@@ -180,6 +210,18 @@ class ModelDownloadWorker(
         }
     }
 
+    private fun calculateFileSha256(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { stream ->
+            val buffer = ByteArray(64 * 1024)
+            var bytesRead: Int
+            while (stream.read(buffer).also { bytesRead = it } != -1) {
+                digest.update(buffer, 0, bytesRead)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
+    }
+
     private fun createNotificationChannel() {
         val channel = NotificationChannel(
             CHANNEL_ID,
@@ -206,6 +248,7 @@ class ModelDownloadWorker(
         }
     }
 
+    @SuppressLint("MissingPermission")
     private fun updateNotification(title: String) {
         try {
             val notification = NotificationCompat.Builder(appContext, CHANNEL_ID)

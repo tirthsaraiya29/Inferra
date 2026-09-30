@@ -100,9 +100,9 @@ class SearchViewModel(
 
                 val profile = state.activeHardwareProfile ?: hardwareRepository.getActiveProfile()
                 val compMap = if (profile != null) {
-                    combined.associate { model ->
-                        model.id to HardwareFitCalculator.calculate(model, model.quantizations.firstOrNull(), profile)
-                    }
+                    combined.associateBy({ it.id }, { model ->
+                        HardwareFitCalculator.calculate(model, model.quantizations.firstOrNull(), profile)
+                    })
                 } else {
                     emptyMap()
                 }
