@@ -11,7 +11,7 @@ import kotlinx.coroutines.withContext
 import java.util.Locale
 
 class QuantDiscoveryRepository(
-    private val api: HuggingFaceApi
+    private val api: HuggingFaceApi,
 ) {
     private companion object {
         const val TAG = "QuantDiscovery"
@@ -66,9 +66,7 @@ class QuantDiscoveryRepository(
             for (sib in ggufSiblings) {
                 val fname = sib.filename ?: continue
                 val quantInfo = parseGgufSibling(repoId, baseId, fname, sib, totalParamsBillion)
-                if (quantInfo != null) {
-                    discoveredQuants.add(quantInfo)
-                }
+                discoveredQuants.add(quantInfo)
             }
 
             // Process AWQ / GPTQ / EXL2 repositories if no GGUF files found
@@ -78,9 +76,7 @@ class QuantDiscoveryRepository(
                     val safetensorsSib = siblings.find { it.filename?.endsWith(".safetensors", ignoreCase = true) == true }
                     val fname = safetensorsSib?.filename ?: "model.safetensors"
                     val quantInfo = parseOtherFormatSibling(repoId, baseId, format, fname, safetensorsSib, totalParamsBillion)
-                    if (quantInfo != null) {
-                        discoveredQuants.add(quantInfo)
-                    }
+                    discoveredQuants.add(quantInfo)
                 }
             }
         }
@@ -100,9 +96,9 @@ class QuantDiscoveryRepository(
         val baseLower = baseModelName.lowercase(Locale.US)
 
         val isNameMatch = nameLower.contains(baseLower) || baseLower.contains(nameLower)
-        val isQuantRepo = nameLower.contains("gguf") || nameLower.contains("awq") ||
+        val isQuantRepo = (nameLower.contains("gguf") || nameLower.contains("awq") ||
                 nameLower.contains("gptq") || nameLower.contains("exl2") ||
-                dto.tags?.any { it.contains("gguf") || it.contains("quantized") } == true
+                (dto.tags?.any { it.contains("gguf") || it.contains("quantized") } == true))
 
         return isNameMatch && isQuantRepo
     }
@@ -113,7 +109,7 @@ class QuantDiscoveryRepository(
         filename: String,
         sibling: HfSiblingDto,
         totalParams: Float
-    ): QuantizationInfo? {
+    ): QuantizationInfo {
         val fnameUpper = filename.uppercase(Locale.US)
 
         val qType = when {
@@ -134,7 +130,7 @@ class QuantDiscoveryRepository(
             else -> filename.substringAfterLast("-").substringBefore(".gguf").ifBlank { "GGUF" }
         }
 
-        val sizeBytes = sibling.size ?: calculateEstimatedSizeBytes(totalParams, qType, "GGUF")
+        val sizeBytes = sibling.size ?: calculateEstimatedSizeBytes(totalParams, qType)
         val ramMb = if (sizeBytes > 0L) ((sizeBytes / (1024 * 1024)) + 1200).toInt() else 0
         val vramMb = (ramMb * 0.9f).toInt()
 
@@ -167,7 +163,7 @@ class QuantDiscoveryRepository(
         filename: String,
         sibling: HfSiblingDto?,
         totalParams: Float
-    ): QuantizationInfo? {
+    ): QuantizationInfo {
         val qType = when (format) {
             "AWQ" -> "AWQ-4bit"
             "GPTQ" -> "GPTQ-4bit"
@@ -175,7 +171,7 @@ class QuantDiscoveryRepository(
             else -> format
         }
 
-        val sizeBytes = sibling?.size ?: calculateEstimatedSizeBytes(totalParams, qType, format)
+        val sizeBytes = sibling?.size ?: calculateEstimatedSizeBytes(totalParams, qType)
         val ramMb = if (sizeBytes > 0L) ((sizeBytes / (1024 * 1024)) + 1500).toInt() else 0
 
         val qualityEvidence = QualityEvidenceEngine.extractQualityEvidence(
@@ -212,7 +208,7 @@ class QuantDiscoveryRepository(
         }
     }
 
-    private fun calculateEstimatedSizeBytes(paramsBillion: Float, qType: String, format: String): Long {
+    private fun calculateEstimatedSizeBytes(paramsBillion: Float, qType: String): Long {
         if (paramsBillion <= 0f) return 0L
         val bytesPerParam = when (qType.uppercase(Locale.US)) {
             "Q2_K" -> 0.32f

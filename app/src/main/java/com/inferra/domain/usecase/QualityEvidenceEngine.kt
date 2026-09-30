@@ -17,7 +17,7 @@ object QualityEvidenceEngine {
         quantRepoId: String,
         quantType: String,
         readmeText: String?,
-        baseReadmeText: String? = null
+        baseReadmeText: String? = null,
     ): QualityEvidence {
         val combinedText = listOfNotNull(readmeText, baseReadmeText).joinToString("\n")
         if (combinedText.isBlank()) {
@@ -37,7 +37,7 @@ object QualityEvidenceEngine {
             val pair = parseBenchmarkPair(combinedText, bench, quantType)
             if (pair != null) {
                 val (baseVal, quantVal) = pair
-                if (baseVal > 0f && quantVal > 0f) {
+                if ((baseVal > 0f) && (quantVal > 0f)) {
                     val retention = if (isPpl) {
                         (baseVal / quantVal) * 100f
                     } else {
@@ -85,8 +85,7 @@ object QualityEvidenceEngine {
         val qTypeLower = quantType.lowercase(Locale.US)
 
         // 1. Try Markdown Table Parsing
-        val tableResult = parseFromMarkdownTable(lines, benchLower, qTypeLower)
-        if (tableResult != null) return tableResult
+        parseFromMarkdownTable(lines, benchLower, qTypeLower)?.let { return it }
 
         // 2. Try Line-by-Line Parsing
         var baselineScore: Float? = null
@@ -139,7 +138,7 @@ object QualityEvidenceEngine {
             val trimmed = line.trim()
             if (!trimmed.startsWith("|") || !trimmed.endsWith("|")) continue
 
-            val cells = trimmed.split("|").map { it.trim().lowercase(Locale.US) }.filter { it.isNotEmpty() }
+            val cells = trimmed.split("|").asSequence().map { it.trim().lowercase(Locale.US) }.filter { it.isNotEmpty() }.toList()
 
             // Check if this is header line containing benchmark name
             if (cells.any { it.contains(benchLower) }) {

@@ -49,16 +49,12 @@ class HardwareDetector(private val context: Context) {
             osName = osName,
             preferredRuntime = preferredRuntime,
             availableStorageGb = storageGb,
-            isLocalDevice = true
+            isLocalDevice = true,
         )
     }
 
     private fun buildCpuName(cores: Int): String {
-        val hw = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            Build.SOC_MODEL.ifBlank { Build.HARDWARE }
-        } else {
-            Build.HARDWARE
-        }
+        val hw = Build.SOC_MODEL.ifBlank { Build.HARDWARE }
         return if (hw.isNotBlank() && !hw.equals("unknown", ignoreCase = true)) {
             "$hw ($cores Cores)"
         } else {
@@ -71,7 +67,7 @@ class HardwareDetector(private val context: Context) {
             val path: File = Environment.getDataDirectory()
             val stat = StatFs(path.path)
             val availableBytes = stat.availableBlocksLong * stat.blockSizeLong
-            (availableBytes / (1024f * 1024f * 1024f) * 10f).toInt() / 10f
+            (((availableBytes / (1024f * 1024f * 1024f)) * 10f).toInt()) / 10f
         } catch (_: Exception) {
             64.0f
         }
