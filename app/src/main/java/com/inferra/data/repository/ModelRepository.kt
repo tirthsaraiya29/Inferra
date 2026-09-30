@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 class ModelRepository(
     private val api: HuggingFaceApi?,
@@ -26,6 +28,7 @@ class ModelRepository(
 ) {
     private companion object {
         const val TAG = "HuggingFaceApi"
+        private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     }
 
     suspend fun getModels(forceRefresh: Boolean = false, limit: Int = 40, page: Int = 0): List<AiModel> = withContext(Dispatchers.IO) {
@@ -143,6 +146,13 @@ class ModelRepository(
 
     private suspend fun saveToLocalDb(models: List<AiModel>) {
         val entities = models.map { model ->
+            val serializedJson = try {
+                json.encodeToString(model)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to serialize AiModel '${model.id}': ${e.message}")
+                ""
+            }
+
             ModelEntity(
                 id = model.id,
                 name = model.name,
@@ -161,13 +171,21 @@ class ModelRepository(
                 isTrending = model.isTrending,
                 isNew = model.isNew,
                 repoUrl = model.repoUrl,
-                rawJson = ""
+                rawJson = serializedJson
             )
         }
         modelDao.insertModels(entities)
     }
 
     private fun parseEntity(entity: ModelEntity): AiModel {
+        if (entity.rawJson.isNotBlank()) {
+            try {
+                return json.decodeFromString<AiModel>(entity.rawJson)
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to deserialize rawJson for model '${entity.id}', falling back to entity columns: ${e.message}")
+            }
+        }
+
         return AiModel(
             id = entity.id,
             name = entity.name,
