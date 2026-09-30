@@ -9,6 +9,8 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.Build
+import androidx.annotation.RequiresPermission
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.work.CoroutineWorker
@@ -50,6 +52,7 @@ class ModelDownloadWorker(
     private val notificationManager = appContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     private val json = Json { ignoreUnknownKeys = true }
 
+    @SuppressLint("MissingPermission")
     override suspend fun doWork(): Result {
         val jobId = inputData.getString(KEY_JOB_ID) ?: return Result.failure()
         val modelId = inputData.getString(KEY_MODEL_ID) ?: return Result.failure()
@@ -236,6 +239,7 @@ class ModelDownloadWorker(
         notificationManager.createNotificationChannel(channel)
     }
 
+    @SuppressLint("MissingPermission")
     private fun createForegroundInfo(title: String): ForegroundInfo {
         val notification = NotificationCompat.Builder(appContext, CHANNEL_ID)
             .setContentTitle(title)
@@ -253,7 +257,7 @@ class ModelDownloadWorker(
 
     @SuppressLint("MissingPermission")
     private fun updateNotification(title: String) {
-        if (Build.VERSION.SDK_INT >= 33 &&
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(
                 appContext,
                 Manifest.permission.POST_NOTIFICATIONS
@@ -270,7 +274,14 @@ class ModelDownloadWorker(
                 .setOngoing(false)
                 .build()
 
-            notificationManager.notify(NOTIFICATION_ID, notification)
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                ContextCompat.checkSelfPermission(
+                    appContext,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+            ) {
+                notificationManager.notify(NOTIFICATION_ID, notification)
+            }
         } catch (_: Exception) {
             // Permission POST_NOTIFICATIONS optional fallback
         }
