@@ -15,6 +15,14 @@ class QuantDiscoveryRepository(
 ) {
     private companion object {
         const val TAG = "QuantDiscovery"
+
+        private fun safeLogD(msg: String) {
+            try { Log.d(TAG, msg) } catch (_: Throwable) { println("[$TAG] $msg") }
+        }
+
+        private fun safeLogW(msg: String) {
+            try { Log.w(TAG, msg) } catch (_: Throwable) { println("[$TAG] WARNING: $msg") }
+        }
     }
 
     suspend fun discoverQuantizations(
@@ -25,7 +33,7 @@ class QuantDiscoveryRepository(
         val parts = baseId.split("/")
         val modelName = if (parts.size > 1) parts[1] else baseId
 
-        Log.d(TAG, "Discovering quantizations dynamically from Hugging Face for model '$baseId'...")
+        safeLogD("Discovering quantizations dynamically from Hugging Face for model '$baseId'...")
 
         val reposToInspect = mutableListOf<HuggingFaceModelDto>()
         reposToInspect.add(baseModelDto)
@@ -43,7 +51,7 @@ class QuantDiscoveryRepository(
                     }
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "Failed searching HF for '$term': ${e.message}")
+                safeLogW("Failed searching HF for '$term': ${e.message}")
             }
         }
 
@@ -79,7 +87,7 @@ class QuantDiscoveryRepository(
 
         // Deduplicate equivalent quantizations (e.g. keep best source for Q4_K_M)
         val deduplicated = deduplicateQuants(discoveredQuants)
-        Log.d(TAG, "Discovered ${deduplicated.size} unique quantization options for model '$baseId'")
+        safeLogD("Discovered ${deduplicated.size} unique quantization options for model '$baseId'")
         deduplicated
     }
 

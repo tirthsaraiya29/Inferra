@@ -63,6 +63,14 @@ object HardwareFitCalculator {
                     "Fits comfortably in VRAM ($reqGbStr GB required / ${profile.vramGb} GB VRAM available)."
                 )
             }
+            availableVram > 0f && totalMemoryRequiredGb > availableVram && totalMemoryRequiredGb <= totalAvailableMem * 0.90f -> {
+                val offload = ((availableVram / totalMemoryRequiredGb) * 100).toInt().coerceIn(0, 95)
+                Triple(
+                    FitGrade.BORDERLINE,
+                    offload,
+                    "Requires RAM offloading ($reqGbStr GB required vs ${profile.vramGb} GB VRAM / $availMemStr GB total memory)."
+                )
+            }
             availableRam > 0f && totalMemoryRequiredGb <= availableRam * 0.85f -> {
                 Triple(
                     FitGrade.EXCELLENT,
