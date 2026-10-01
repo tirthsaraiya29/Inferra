@@ -146,31 +146,6 @@ data class PricingRecordEntity(
     val sourceUrl: String
 )
 
-@Entity(
-    tableName = "local_benchmarks",
-    indices = [Index(value = ["canonicalId"])]
-)
-data class LocalBenchmarkResultEntity(
-    @PrimaryKey val id: String,
-    val canonicalId: String,
-    val quantizationType: String,
-    val modelRevision: String,
-    val engineName: String,
-    val engineVersion: String,
-    val backendName: String,
-    val deviceName: String,
-    val contextLengthTokens: Int,
-    val promptTokenCount: Int,
-    val generatedTokenCount: Int,
-    val ttftMs: Float,
-    val prefillTokensPerSec: Float,
-    val decodeTokensPerSec: Float,
-    val totalLatencyMs: Long,
-    val peakRamMb: Int,
-    val peakVramMb: Int,
-    val timestampMs: Long
-)
-
 @Entity(tableName = "watchlist")
 data class WatchlistEntity(
     @PrimaryKey val modelId: String,

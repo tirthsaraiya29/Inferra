@@ -17,14 +17,13 @@ import androidx.room.RoomDatabase
         ProviderEntity::class,
         ProviderDeploymentEntity::class,
         PricingRecordEntity::class,
-        LocalBenchmarkResultEntity::class,
         WatchlistEntity::class,
         DownloadJobEntity::class,
         HardwareProfileEntity::class,
         DeviceTargetEntity::class,
         LocalModelEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -32,7 +31,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun canonicalModelDao(): CanonicalModelDao
     abstract fun benchmarkDao(): BenchmarkDao
     abstract fun providerDao(): ProviderDao
-    abstract fun localBenchmarkDao(): LocalBenchmarkDao
     abstract fun watchlistDao(): WatchlistDao
     abstract fun downloadJobDao(): DownloadJobDao
     abstract fun hardwareProfileDao(): HardwareProfileDao

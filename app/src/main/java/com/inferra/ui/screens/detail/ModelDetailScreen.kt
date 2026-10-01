@@ -43,7 +43,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
-import com.inferra.domain.model.DownloadStatus
 import com.inferra.domain.model.EvidenceStrength
 import com.inferra.domain.model.FitGrade
 import com.inferra.domain.model.QualityEvidence
@@ -52,7 +51,6 @@ import com.inferra.ui.components.GlassBadge
 import com.inferra.ui.components.GlassButton
 import com.inferra.ui.components.GlassCard
 import com.inferra.ui.components.LiquidGlassBackground
-import com.inferra.ui.components.LocalBenchmarkRunnerView
 import com.inferra.ui.components.MemoryBreakdownCard
 import com.inferra.ui.components.ProviderComparisonView
 import com.inferra.ui.theme.AccentAzure
@@ -212,18 +210,7 @@ fun ModelDetailScreen(
                     }
                 }
 
-                // Level 5: On-Device Local Benchmark Execution
-                item {
-                    Box(modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)) {
-                        LocalBenchmarkRunnerView(
-                            canonicalId = state.canonicalModel?.id ?: model.id,
-                            quantType = state.selectedQuantization?.quantType ?: "Q4_K_M",
-                            localFilePath = state.localFilePath
-                        )
-                    }
-                }
-
-                // Level 6: Hardware Fit Estimate
+                // Level 5: Hardware & Memory Requirements Analysis
                 state.compatibilityResult?.let { comp ->
                     item {
                         Column(
@@ -232,9 +219,9 @@ fun ModelDetailScreen(
                                 .padding(horizontal = 20.dp, vertical = 12.dp)
                         ) {
                             val (gradeText, gradeColor) = when (comp.fitGrade) {
-                                FitGrade.EXCELLENT -> Pair("Fits active device", FitExcellent)
+                                FitGrade.EXCELLENT -> Pair("Fits workstation RAM/VRAM", FitExcellent)
                                 FitGrade.BORDERLINE -> Pair("Offload required (${comp.offloadPercentage}%)", FitBorderline)
-                                FitGrade.INSUFFICIENT -> Pair("Requires more RAM", FitInsufficient)
+                                FitGrade.INSUFFICIENT -> Pair("High memory requirement", FitInsufficient)
                                 FitGrade.UNKNOWN -> Pair("Hardware profile not configured", TextMuted)
                             }
 
@@ -250,7 +237,7 @@ fun ModelDetailScreen(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = "Runability Estimate",
+                                            text = "Hardware Requirement Analysis",
                                             fontSize = 14.sp,
                                             fontWeight = FontWeight.SemiBold,
                                             color = TextPrimary
@@ -272,7 +259,7 @@ fun ModelDetailScreen(
                     }
                 }
 
-                // Level 7: Active Download Progress Bar
+                // Level 6: Active Artifact Download Progress
                 state.activeLocalDownloadJob?.let { job ->
                     item {
                         Column(
@@ -292,7 +279,7 @@ fun ModelDetailScreen(
                                     ) {
                                         Column {
                                             Text(
-                                                text = "Downloading ${job.manifest.fileName}",
+                                                text = "Downloading artifact: ${job.manifest.fileName}",
                                                 fontSize = 14.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = TextPrimary
@@ -325,7 +312,7 @@ fun ModelDetailScreen(
                     }
                 }
 
-                // Level 8: Discovered Quantizations
+                // Level 7: Discovered Quantizations & Model Artifacts
                 if (model.quantizations.isNotEmpty()) {
                     item {
                         Column(
@@ -334,7 +321,7 @@ fun ModelDetailScreen(
                                 .padding(horizontal = 20.dp, vertical = 12.dp)
                         ) {
                             Text(
-                                text = "Discovered Quantizations (${model.quantizations.size})",
+                                text = "Discovered Model Artifacts (${model.quantizations.size})",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = TextPrimary
@@ -380,7 +367,7 @@ fun ModelDetailScreen(
                                                 Spacer(modifier = Modifier.height(4.dp))
 
                                                 Text(
-                                                    text = "${formatBytes(quant.fileSizeBytes)} • Estimated RAM: ~${quant.estimatedRamMb / 1024} GB",
+                                                    text = "${formatBytes(quant.fileSizeBytes)} • Est. Weight RAM: ~${quant.estimatedRamMb / 1024} GB",
                                                     fontSize = 12.sp,
                                                     fontWeight = FontWeight.Medium,
                                                     color = TextPrimary
@@ -397,7 +384,7 @@ fun ModelDetailScreen(
                                                 ) {
                                                     Icon(imageVector = Icons.Default.Download, contentDescription = "Download", modifier = Modifier.height(14.dp))
                                                     Spacer(modifier = Modifier.width(4.dp))
-                                                    Text(text = "Download", fontSize = 12.sp)
+                                                    Text(text = "Save Artifact", fontSize = 12.sp)
                                                 }
 
                                                 Spacer(modifier = Modifier.height(6.dp))
@@ -408,7 +395,7 @@ fun ModelDetailScreen(
                                                         showDevicePickerSheet = true
                                                     }
                                                 ) {
-                                                    Text(text = "Send to PC", fontSize = 11.sp, color = TextMuted)
+                                                    Text(text = "Export to Workstation", fontSize = 11.sp, color = TextMuted)
                                                 }
                                             }
                                         }
@@ -424,7 +411,7 @@ fun ModelDetailScreen(
             }
         }
 
-        // Send to PC Bottom Sheet Modal
+        // Export to Workstation Bottom Sheet Modal
         if (showDevicePickerSheet) {
             ModalBottomSheet(
                 onDismissRequest = { showDevicePickerSheet = false },
@@ -436,14 +423,14 @@ fun ModelDetailScreen(
                         .padding(24.dp)
                 ) {
                     Text(
-                        text = "Send download to PC",
+                        text = "Export Artifact Manifest to Workstation",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Select a paired workstation to receive the download manifest.",
+                        text = "Select a paired workstation or server to receive the model download manifest.",
                         fontSize = 13.sp,
                         color = TextSecondary
                     )
@@ -451,7 +438,7 @@ fun ModelDetailScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     if (state.companionDevices.isEmpty()) {
-                        Text(text = "No paired companion devices found.", color = TextMuted, fontSize = 13.sp)
+                        Text(text = "No paired workstations found.", color = TextMuted, fontSize = 13.sp)
                     } else {
                         state.companionDevices.forEach { dev ->
                             GlassCard(
@@ -501,7 +488,7 @@ private fun QualityEvidenceView(evidence: QualityEvidence) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Model Quality Evidence",
+                    text = "Model Quality Retention Evidence",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary

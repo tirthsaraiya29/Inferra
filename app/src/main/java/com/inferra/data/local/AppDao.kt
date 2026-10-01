@@ -82,18 +82,6 @@ interface ProviderDao {
 }
 
 @Dao
-interface LocalBenchmarkDao {
-    @Query("SELECT * FROM local_benchmarks WHERE canonicalId = :canonicalId ORDER BY timestampMs DESC")
-    fun getResultsForModel(canonicalId: String): Flow<List<LocalBenchmarkResultEntity>>
-
-    @Query("SELECT * FROM local_benchmarks ORDER BY timestampMs DESC")
-    fun getAllLocalResults(): Flow<List<LocalBenchmarkResultEntity>>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertResult(result: LocalBenchmarkResultEntity)
-}
-
-@Dao
 interface WatchlistDao {
     @Query("SELECT * FROM watchlist ORDER BY addedAtEpochMs DESC")
     fun getWatchlist(): Flow<List<WatchlistEntity>>

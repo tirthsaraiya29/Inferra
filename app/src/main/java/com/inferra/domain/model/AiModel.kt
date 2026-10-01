@@ -28,6 +28,17 @@ enum class LicenseType {
     APACHE_2, MIT, LLAMA_COMMUNITY, QWEN_RESEARCH, PERMISSIVE_OTHER, RESTRICTED
 }
 
+@Serializable
+enum class AttentionArchitecture {
+    MHA,               // Multi-Head Attention
+    GQA,               // Grouped-Query Attention
+    MQA,               // Multi-Query Attention
+    MLA,               // Multi-head Latent Attention (DeepSeek V2/V3)
+    SLIDING_WINDOW,    // Sliding Window Attention (Mistral)
+    STATE_SPACE_SSM,   // Mamba / Recurrent SSM
+    HYBRID             // Hybrid Architecture
+}
+
 @Immutable
 @Serializable
 data class QuantizationInfo(

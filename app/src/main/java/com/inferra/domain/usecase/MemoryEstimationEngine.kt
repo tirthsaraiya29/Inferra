@@ -68,19 +68,15 @@ object MemoryEstimationEngine {
         val effectiveContext = contextLengthTokens.coerceAtLeast(1024).toDouble()
         val kvCacheBytes: Double = when (attentionArch) {
             AttentionArchitecture.MHA -> {
-                // Formula: 2 * numLayers * numHeads * headDim * contextLength * kvBytesPerElement
                 2.0 * numLayers * numHeads * headDim * effectiveContext * kvBytesPerElement
             }
             AttentionArchitecture.GQA -> {
-                // Formula: 2 * numLayers * numKvHeads * headDim * contextLength * kvBytesPerElement
                 2.0 * numLayers * numKvHeads * headDim * effectiveContext * kvBytesPerElement
             }
             AttentionArchitecture.MQA -> {
-                // Formula: 2 * numLayers * 1 * headDim * contextLength * kvBytesPerElement
                 2.0 * numLayers * 1.0 * headDim * effectiveContext * kvBytesPerElement
             }
             AttentionArchitecture.MLA -> {
-                // DeepSeek MLA compressed latent space: (d_c + d_R) * numLayers * contextLength * kvBytes
                 val dLatent = 512.0
                 val dRope = 64.0
                 (dLatent + dRope) * numLayers * effectiveContext * kvBytesPerElement
@@ -91,7 +87,6 @@ object MemoryEstimationEngine {
                 2.0 * numLayers * numKvHeads * headDim * effWin * kvBytesPerElement
             }
             AttentionArchitecture.STATE_SPACE_SSM -> {
-                // Mamba SSM recurrent state memory: O(1) constant per layer
                 val stateDim = 16.0
                 val dModel = (numHeads * headDim).toDouble()
                 (numLayers * dModel * stateDim * 2.0).coerceAtLeast(1024.0 * 1024.0)
