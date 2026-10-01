@@ -22,6 +22,78 @@ interface ModelDao {
 }
 
 @Dao
+interface CanonicalModelDao {
+    @Query("SELECT * FROM canonical_models WHERE id = :id LIMIT 1")
+    suspend fun getById(id: String): CanonicalModelEntity?
+
+    @Query("SELECT * FROM canonical_models")
+    fun getAllCanonicalModels(): Flow<List<CanonicalModelEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertCanonicalModels(models: List<CanonicalModelEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertFamily(family: ModelFamilyEntity)
+
+    @Query("SELECT canonicalId FROM model_aliases WHERE aliasId = :aliasId LIMIT 1")
+    suspend fun resolveAlias(aliasId: String): String?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAliases(aliases: List<ModelAliasEntity>)
+}
+
+@Dao
+interface BenchmarkDao {
+    @Query("SELECT * FROM benchmark_definitions")
+    fun getAllDefinitions(): Flow<List<BenchmarkDefinitionEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDefinitions(definitions: List<BenchmarkDefinitionEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertVersions(versions: List<BenchmarkVersionEntity>)
+
+    @Query("SELECT * FROM benchmark_results WHERE canonicalId = :canonicalId")
+    fun getResultsForCanonicalModel(canonicalId: String): Flow<List<BenchmarkResultEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertResults(results: List<BenchmarkResultEntity>)
+}
+
+@Dao
+interface ProviderDao {
+    @Query("SELECT * FROM providers")
+    fun getAllProviders(): Flow<List<ProviderEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertProviders(providers: List<ProviderEntity>)
+
+    @Query("SELECT * FROM provider_deployments WHERE canonicalId = :canonicalId")
+    fun getDeploymentsForModel(canonicalId: String): Flow<List<ProviderDeploymentEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDeployments(deployments: List<ProviderDeploymentEntity>)
+
+    @Query("SELECT * FROM pricing_records WHERE deploymentId = :deploymentId ORDER BY effectiveDate DESC LIMIT 1")
+    suspend fun getLatestPricing(deploymentId: String): PricingRecordEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertPricing(pricing: List<PricingRecordEntity>)
+}
+
+@Dao
+interface LocalBenchmarkDao {
+    @Query("SELECT * FROM local_benchmarks WHERE canonicalId = :canonicalId ORDER BY timestampMs DESC")
+    fun getResultsForModel(canonicalId: String): Flow<List<LocalBenchmarkResultEntity>>
+
+    @Query("SELECT * FROM local_benchmarks ORDER BY timestampMs DESC")
+    fun getAllLocalResults(): Flow<List<LocalBenchmarkResultEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertResult(result: LocalBenchmarkResultEntity)
+}
+
+@Dao
 interface WatchlistDao {
     @Query("SELECT * FROM watchlist ORDER BY addedAtEpochMs DESC")
     fun getWatchlist(): Flow<List<WatchlistEntity>>
