@@ -3,29 +3,43 @@ package com.inferra.ui.screens.detail
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.inferra.data.network.HuggingFaceClient
+import com.inferra.data.repository.BenchmarkRepository
 import com.inferra.data.repository.CompanionRepository
 import com.inferra.data.repository.DownloadRepository
 import com.inferra.data.repository.HardwareRepository
 import com.inferra.data.repository.ModelDownloader
 import com.inferra.data.repository.ModelRepository
+import com.inferra.data.repository.ProviderRepository
 import com.inferra.data.repository.QuantDiscoveryRepository
 import com.inferra.domain.model.AiModel
+import com.inferra.domain.model.BenchmarkResult
+import com.inferra.domain.model.CanonicalModel
 import com.inferra.domain.model.DeviceTarget
 import com.inferra.domain.model.DownloadJob
 import com.inferra.domain.model.HardwareCompatibilityResult
 import com.inferra.domain.model.HardwareProfile
+import com.inferra.domain.model.ProviderMeasurement
 import com.inferra.domain.model.QuantizationInfo
+import com.inferra.domain.usecase.BenchmarkRegistry
+import com.inferra.domain.usecase.CanonicalModelResolver
 import com.inferra.domain.usecase.HardwareFitCalculator
+import com.inferra.ui.components.ProviderRowItem
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.File
 
 data class ModelDetailUiState(
     val isLoading: Boolean = true,
     val model: AiModel? = null,
+    val canonicalModel: CanonicalModel? = null,
+    val benchmarks: List<BenchmarkResult> = emptyList(),
+    val providerRows: List<ProviderRowItem> = emptyList(),
+    val localFilePath: String? = null,
     val activeHardwareProfile: HardwareProfile? = null,
     val selectedQuantization: QuantizationInfo? = null,
     val compatibilityResult: HardwareCompatibilityResult? = null,
@@ -33,7 +47,7 @@ data class ModelDetailUiState(
     val companionDevices: List<DeviceTarget> = emptyList(),
     val sendToPcSuccessMessage: String? = null,
     val activeLocalDownloadJob: DownloadJob? = null,
-    val errorMessage: String? = null,
+    val errorMessage: String? = null
 )
 
 class ModelDetailViewModel(
@@ -42,6 +56,8 @@ class ModelDetailViewModel(
     private val hardwareRepository: HardwareRepository,
     private val downloadRepository: DownloadRepository,
     private val companionRepository: CompanionRepository,
+    private val providerRepository: ProviderRepository? = null,
+    private val benchmarkRepository: BenchmarkRepository? = null,
     private val quantDiscoveryRepository: QuantDiscoveryRepository = QuantDiscoveryRepository(HuggingFaceClient.api),
     private val modelDownloader: ModelDownloader? = null
 ) : ViewModel() {
@@ -67,10 +83,17 @@ class ModelDetailViewModel(
         val model = _uiState.value.model ?: return
         val profile = _uiState.value.activeHardwareProfile ?: return
         val comp = HardwareFitCalculator.calculate(model, quant, profile)
+
+        // Check if file exists locally
+        val downloadDir = modelDownloader?.getDownloadDirectory()
+        val file = if (downloadDir != null) File(downloadDir, quant.fileName) else null
+        val localPath = if (file != null && file.exists()) file.absolutePath else null
+
         _uiState.update {
             it.copy(
                 selectedQuantization = quant,
-                compatibilityResult = comp
+                compatibilityResult = comp,
+                localFilePath = localPath
             )
         }
     }
@@ -135,6 +158,32 @@ class ModelDetailViewModel(
                 val companions = companionRepository.devicesFlow.first()
 
                 if (baseModel != null) {
+                    val canonicalModel = modelRepository.getCanonicalModel(modelId)
+                    val canonicalId = canonicalModel.id
+
+                    val benchmarks = benchmarkRepository?.getBenchmarkResultsForCanonicalModel(canonicalId)?.firstOrNull()
+                        ?: BenchmarkRegistry.getStandardBenchmarksForModel(canonicalId)
+
+                    val deployments = providerRepository?.getDeploymentsForModel(canonicalId)?.firstOrNull() ?: emptyList()
+                    val providerRows = deployments.map { dep ->
+                        val pricing = providerRepository?.getPricingForDeployment(dep.id)
+                        val meas = providerRepository?.getMeasurementsForDeployment(dep.id)
+                            ?: ProviderMeasurement("m:default", dep.id)
+                        val providerName = when {
+                            dep.providerId.contains("groq") -> "Groq"
+                            dep.providerId.contains("together") -> "Together AI"
+                            dep.providerId.contains("fireworks") -> "Fireworks AI"
+                            dep.providerId.contains("deepinfra") -> "DeepInfra"
+                            else -> "Cloud Provider"
+                        }
+                        ProviderRowItem(
+                            deployment = dep,
+                            providerName = providerName,
+                            pricing = pricing,
+                            measurement = meas
+                        )
+                    }
+
                     // Dynamically discover quantized variants from Hugging Face
                     val dto = try { HuggingFaceClient.api.getModelDetail(id = modelId) } catch (_: Exception) { null }
                     val discoveredQuants = if (dto != null) {
@@ -153,10 +202,18 @@ class ModelDetailViewModel(
                     val primaryQuant = finalQuants.firstOrNull()
                     val comp = HardwareFitCalculator.calculate(enrichedModel, primaryQuant, profile)
 
+                    val downloadDir = modelDownloader?.getDownloadDirectory()
+                    val file = if (downloadDir != null && primaryQuant != null) File(downloadDir, primaryQuant.fileName) else null
+                    val localPath = if (file != null && file.exists()) file.absolutePath else null
+
                     _uiState.update {
                         it.copy(
                             isLoading = false,
                             model = enrichedModel,
+                            canonicalModel = canonicalModel,
+                            benchmarks = benchmarks,
+                            providerRows = providerRows,
+                            localFilePath = localPath,
                             activeHardwareProfile = profile,
                             selectedQuantization = primaryQuant,
                             compatibilityResult = comp,

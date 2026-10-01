@@ -11,6 +11,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -26,11 +27,13 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.inferra.data.local.AppDatabase
 import com.inferra.data.network.HuggingFaceClient
+import com.inferra.data.repository.BenchmarkRepository
 import com.inferra.data.repository.CompanionRepository
 import com.inferra.data.repository.DownloadRepository
 import com.inferra.data.repository.HardwareRepository
 import com.inferra.data.repository.ModelDownloader
 import com.inferra.data.repository.ModelRepository
+import com.inferra.data.repository.ProviderRepository
 import com.inferra.data.repository.QuantDiscoveryRepository
 import com.inferra.data.repository.SettingsRepository
 import com.inferra.ui.components.glass.BackdropCaptureContainer
@@ -68,8 +71,15 @@ fun InferraNavHost(
     val hardwareRepository = remember { HardwareRepository(context, db.hardwareProfileDao()) }
     val downloadRepository = remember { DownloadRepository(db.downloadJobDao()) }
     val companionRepository = remember { CompanionRepository(db.deviceTargetDao()) }
+    val providerRepository = remember { ProviderRepository(db.providerDao()) }
+    val benchmarkRepository = remember { BenchmarkRepository(db.benchmarkDao()) }
     val quantDiscoveryRepository = remember { QuantDiscoveryRepository(HuggingFaceClient.api) }
     val modelDownloader = remember { ModelDownloader(context) }
+
+    // Seed default providers on launch
+    LaunchedEffect(Unit) {
+        providerRepository.seedDefaultProviders()
+    }
 
     // Shared ViewModels
     val discoveryViewModel = remember { DiscoveryViewModel(modelRepository, hardwareRepository) }
@@ -148,6 +158,8 @@ fun InferraNavHost(
                             hardwareRepository = hardwareRepository,
                             downloadRepository = downloadRepository,
                             companionRepository = companionRepository,
+                            providerRepository = providerRepository,
+                            benchmarkRepository = benchmarkRepository,
                             quantDiscoveryRepository = quantDiscoveryRepository,
                             modelDownloader = modelDownloader
                         )

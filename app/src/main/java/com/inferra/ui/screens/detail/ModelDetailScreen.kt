@@ -47,10 +47,14 @@ import com.inferra.domain.model.DownloadStatus
 import com.inferra.domain.model.EvidenceStrength
 import com.inferra.domain.model.FitGrade
 import com.inferra.domain.model.QualityEvidence
+import com.inferra.ui.components.BenchmarkComparisonChart
 import com.inferra.ui.components.GlassBadge
 import com.inferra.ui.components.GlassButton
 import com.inferra.ui.components.GlassCard
 import com.inferra.ui.components.LiquidGlassBackground
+import com.inferra.ui.components.LocalBenchmarkRunnerView
+import com.inferra.ui.components.MemoryBreakdownCard
+import com.inferra.ui.components.ProviderComparisonView
 import com.inferra.ui.theme.AccentAzure
 import com.inferra.ui.theme.FitBorderline
 import com.inferra.ui.theme.FitExcellent
@@ -72,7 +76,7 @@ fun ModelDetailScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-    var showDevicePickerSheet by remember { mutableStateOf(value = false) }
+    var showDevicePickerSheet by remember { mutableStateOf(false) }
 
     LiquidGlassBackground {
         if (state.isLoading) {
@@ -180,7 +184,46 @@ fun ModelDetailScreen(
                     }
                 }
 
-                // Level 2: Can I run it? (Inferra Hardware Fit Estimate)
+                // Level 2: Architecture & Memory Breakdown Card
+                item {
+                    Box(modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)) {
+                        MemoryBreakdownCard(
+                            model = model,
+                            quantization = state.selectedQuantization
+                        )
+                    }
+                }
+
+                // Level 3: Canonical Benchmark Evidence Chart
+                if (state.benchmarks.isNotEmpty()) {
+                    item {
+                        Box(modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)) {
+                            BenchmarkComparisonChart(benchmarks = state.benchmarks)
+                        }
+                    }
+                }
+
+                // Level 4: Provider Pricing & Performance
+                if (state.providerRows.isNotEmpty()) {
+                    item {
+                        Box(modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)) {
+                            ProviderComparisonView(items = state.providerRows)
+                        }
+                    }
+                }
+
+                // Level 5: On-Device Local Benchmark Execution
+                item {
+                    Box(modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)) {
+                        LocalBenchmarkRunnerView(
+                            canonicalId = state.canonicalModel?.id ?: model.id,
+                            quantType = state.selectedQuantization?.quantType ?: "Q4_K_M",
+                            localFilePath = state.localFilePath
+                        )
+                    }
+                }
+
+                // Level 6: Hardware Fit Estimate
                 state.compatibilityResult?.let { comp ->
                     item {
                         Column(
@@ -223,21 +266,13 @@ fun ModelDetailScreen(
                                         color = TextSecondary,
                                         lineHeight = 18.sp
                                     )
-
-                                    Spacer(modifier = Modifier.height(8.dp))
-
-                                    Text(
-                                        text = "* Calculated based on active hardware profile. Inferra memory fit estimate.",
-                                        fontSize = 11.sp,
-                                        color = TextMuted
-                                    )
                                 }
                             }
                         }
                     }
                 }
 
-                // Level 3: Active Download Progress Bar (If downloading locally)
+                // Level 7: Active Download Progress Bar
                 state.activeLocalDownloadJob?.let { job ->
                     item {
                         Column(
@@ -284,60 +319,13 @@ fun ModelDetailScreen(
                                         modifier = Modifier.fillMaxWidth(),
                                         color = AccentAzure
                                     )
-
-                                    Spacer(modifier = Modifier.height(6.dp))
-
-                                    Text(
-                                        text = if (job.status == DownloadStatus.COMPLETED) "Download Complete!" else if (job.status == DownloadStatus.FAILED) "Failed: ${job.errorMessage}" else "ETA: ${job.etaSeconds}s",
-                                        fontSize = 11.sp,
-                                        color = if (job.status == DownloadStatus.FAILED) FitInsufficient else AccentAzure
-                                    )
                                 }
                             }
                         }
                     }
                 }
 
-                // Level 4: Technical Specifications Overview
-                item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 12.dp)
-                    ) {
-                        Text(
-                            text = "Specifications",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary
-                        )
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            SpecBox(
-                                title = "PARAMETERS",
-                                value = if (model.totalParamsBillion <= 0f) "Not specified" else if (model.isMoe) "${String.format(Locale.US, "%.1f", model.totalParamsBillion)}B MoE" else "${String.format(Locale.US, "%.1f", model.totalParamsBillion)}B",
-                                modifier = Modifier.weight(1f)
-                            )
-                            SpecBox(
-                                title = "CONTEXT",
-                                value = if (model.contextLengthTokens <= 0) "Not specified" else "${model.contextLengthTokens / 1024}K tokens",
-                                modifier = Modifier.weight(1f)
-                            )
-                            SpecBox(
-                                title = "ARCHITECTURE",
-                                value = model.architecture.ifBlank { "Unknown" }.take(12),
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
-                }
-
-                // Level 5: Dynamic Hugging Face Quantizations & Quality Evidence
+                // Level 8: Discovered Quantizations
                 if (model.quantizations.isNotEmpty()) {
                     item {
                         Column(
@@ -389,14 +377,6 @@ fun ModelDetailScreen(
                                                     color = TextSecondary
                                                 )
 
-                                                if (quant.sourceRepo.isNotBlank()) {
-                                                    Text(
-                                                        text = "Repo: ${quant.sourceRepo}",
-                                                        fontSize = 11.sp,
-                                                        color = TextMuted
-                                                    )
-                                                }
-
                                                 Spacer(modifier = Modifier.height(4.dp))
 
                                                 Text(
@@ -433,7 +413,6 @@ fun ModelDetailScreen(
                                             }
                                         }
 
-                                        // Quality Evidence Section for this Quant
                                         Spacer(modifier = Modifier.height(12.dp))
                                         QualityEvidenceView(evidence = quant.qualityEvidence)
                                     }
@@ -567,38 +546,7 @@ private fun QualityEvidenceView(evidence: QualityEvidence) {
                         )
                     }
                 }
-
-                if (evidence.sourceUrl.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "Source: ${evidence.sourceRepo} • Baseline: ${evidence.comparisonBaseline}",
-                        fontSize = 10.sp,
-                        color = TextMuted
-                    )
-                }
             }
-        }
-    }
-}
-
-@Composable
-private fun SpecBox(
-    title: String,
-    value: String,
-    modifier: Modifier = Modifier,
-) {
-    GlassCard(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        backgroundColor = InkCard
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(text = title, fontSize = 9.sp, fontWeight = FontWeight.Medium, color = TextMuted)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(text = value, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
         }
     }
 }
