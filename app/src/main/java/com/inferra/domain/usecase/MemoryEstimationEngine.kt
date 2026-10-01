@@ -58,56 +58,56 @@ object MemoryEstimationEngine {
         val (attentionArch, numLayers, numHeads, numKvHeads, headDim) = inferArchParams(archLower, model.totalParamsBillion)
 
         // KV cache byte multiplier (FP16 = 2 bytes, Q8_0 = 1 byte, Q4_0 = 0.5 bytes)
-        val kvBytesPerElement = when (kvCacheQuantType.uppercase(Locale.US)) {
-            "Q8_0" -> 1.0f
-            "Q4_0" -> 0.5f
-            else -> 2.0f // FP16 default
+        val kvBytesPerElement: Double = when (kvCacheQuantType.uppercase(Locale.US)) {
+            "Q8_0" -> 1.0
+            "Q4_0" -> 0.5
+            else -> 2.0 // FP16 default
         }
 
         // 3. Architecture-Aware KV Cache Calculation
-        val effectiveContext = contextLengthTokens.coerceAtLeast(1024)
-        val kvCacheBytes = when (attentionArch) {
+        val effectiveContext = contextLengthTokens.coerceAtLeast(1024).toDouble()
+        val kvCacheBytes: Double = when (attentionArch) {
             AttentionArchitecture.MHA -> {
                 // Formula: 2 * numLayers * numHeads * headDim * contextLength * kvBytesPerElement
-                2L * numLayers * numHeads * headDim * effectiveContext * kvBytesPerElement
+                2.0 * numLayers * numHeads * headDim * effectiveContext * kvBytesPerElement
             }
             AttentionArchitecture.GQA -> {
                 // Formula: 2 * numLayers * numKvHeads * headDim * contextLength * kvBytesPerElement
-                2L * numLayers * numKvHeads * headDim * effectiveContext * kvBytesPerElement
+                2.0 * numLayers * numKvHeads * headDim * effectiveContext * kvBytesPerElement
             }
             AttentionArchitecture.MQA -> {
                 // Formula: 2 * numLayers * 1 * headDim * contextLength * kvBytesPerElement
-                2L * numLayers * 1 * headDim * effectiveContext * kvBytesPerElement
+                2.0 * numLayers * 1.0 * headDim * effectiveContext * kvBytesPerElement
             }
             AttentionArchitecture.MLA -> {
                 // DeepSeek MLA compressed latent space: (d_c + d_R) * numLayers * contextLength * kvBytes
-                val dLatent = 512
-                val dRope = 64
-                (dLatent + dRope).toLong() * numLayers * effectiveContext * kvBytesPerElement
+                val dLatent = 512.0
+                val dRope = 64.0
+                (dLatent + dRope) * numLayers * effectiveContext * kvBytesPerElement
             }
             AttentionArchitecture.SLIDING_WINDOW -> {
-                val windowSize = 4096
+                val windowSize = 4096.0
                 val effWin = effectiveContext.coerceAtMost(windowSize)
-                2L * numLayers * numKvHeads * headDim * effWin * kvBytesPerElement
+                2.0 * numLayers * numKvHeads * headDim * effWin * kvBytesPerElement
             }
             AttentionArchitecture.STATE_SPACE_SSM -> {
                 // Mamba SSM recurrent state memory: O(1) constant per layer
-                val stateDim = 16
-                val dModel = numHeads * headDim
-                (numLayers.toLong() * dModel * stateDim * 2).coerceAtLeast(1024 * 1024)
+                val stateDim = 16.0
+                val dModel = (numHeads * headDim).toDouble()
+                (numLayers * dModel * stateDim * 2.0).coerceAtLeast(1024.0 * 1024.0)
             }
             AttentionArchitecture.HYBRID -> {
-                2L * numLayers * numKvHeads * headDim * effectiveContext * kvBytesPerElement
+                2.0 * numLayers * numKvHeads * headDim * effectiveContext * kvBytesPerElement
             }
         }
 
-        val kvCacheMemoryMb = (kvCacheBytes / (1024L * 1024L)).toInt().coerceAtLeast(16)
+        val kvCacheMemoryMb = (kvCacheBytes / (1024.0 * 1024.0)).toInt().coerceAtLeast(16)
 
         // 4. Activation Memory
         val activationMemoryMb = ((numLayers * headDim * 4.0) / 1024.0).toInt().coerceIn(128, 1024)
 
         // 5. Backend Overhead Memory (Vulkan/CUDA/CPU graph allocator overhead)
-        val backendOverheadMb = if (weightMemoryMb > 16000) 1024 else 512
+        val backendOverheadMb = if (weightMemoryMb > 30000) 1024 else 512
 
         val totalMemoryMb = weightMemoryMb + kvCacheMemoryMb + activationMemoryMb + backendOverheadMb
         val totalMemoryGb = totalMemoryMb / 1024.0f
@@ -118,7 +118,7 @@ object MemoryEstimationEngine {
             else -> EstimationConfidence.APPROXIMATE
         }
 
-        val desc = "Architecture: ${attentionArch.name} • Weights: ${weightMemoryMb / 1024f}GB • KV Cache (${effectiveContext / 1024}K): ${kvCacheMemoryMb}MB • Backend Overhead: ${backendOverheadMb}MB"
+        val desc = "Architecture: ${attentionArch.name} • Weights: ${weightMemoryMb / 1024f}GB • KV Cache (${effectiveContext.toInt() / 1024}K): ${kvCacheMemoryMb}MB • Backend Overhead: ${backendOverheadMb}MB"
 
         return MemoryBreakdown(
             weightMemoryMb = weightMemoryMb,

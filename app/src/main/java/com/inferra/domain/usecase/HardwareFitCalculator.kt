@@ -29,7 +29,8 @@ object HardwareFitCalculator {
 
         val breakdown = MemoryEstimationEngine.estimate(
             model = model,
-            quantization = quantization
+            quantization = quantization,
+            contextLengthTokens = model.contextLengthTokens.coerceAtMost(8192)
         )
 
         val totalMemoryRequiredGb = breakdown.totalMemoryGb
@@ -43,7 +44,7 @@ object HardwareFitCalculator {
         val availMemStr = String.format(Locale.US, "%.1f", totalAvailableMem)
 
         val (fitGrade, offloadPct, explanation) = when {
-            availableVram > 0f && totalMemoryRequiredGb <= availableVram * 0.90f -> {
+            availableVram > 0f && totalMemoryRequiredGb <= availableVram * 0.95f -> {
                 Triple(
                     FitGrade.EXCELLENT,
                     100,
