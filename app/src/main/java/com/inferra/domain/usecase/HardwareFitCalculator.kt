@@ -27,26 +27,13 @@ object HardwareFitCalculator {
             )
         }
 
-        val quantMultiplier = when (quantization?.quantType?.uppercase(Locale.US)) {
-            "Q2_K" -> 0.30f
-            "Q3_K_M", "Q3_K_S", "IQ3_XS" -> 0.42f
-            "Q4_K_M", "Q4_K_S", "Q4_0", "IQ4_XS", "AWQ-4BIT", "GPTQ-4BIT", "EXL2-4.0BPW" -> 0.55f
-            "Q5_K_M", "Q5_0" -> 0.68f
-            "Q6_K" -> 0.78f
-            "Q8_0", "GPTQ-8BIT" -> 1.05f
-            "FP16", "BF16" -> 2.05f
-            else -> 0.60f
-        }
+        val breakdown = MemoryEstimationEngine.estimate(
+            model = model,
+            quantization = quantization
+        )
 
-        val weightsSizeGb = if (quantization != null && quantization.fileSizeBytes > 0L) {
-            quantization.fileSizeBytes / (1024f * 1024f * 1024f)
-        } else {
-            model.totalParamsBillion * quantMultiplier
-        }
-
-        // KV cache context overhead estimate
-        val contextOverheadGb = (model.contextLengthTokens.coerceAtMost(32768) / 8192f) * 0.8f
-        val totalMemoryRequiredGb = weightsSizeGb + contextOverheadGb + 0.5f
+        val totalMemoryRequiredGb = breakdown.totalMemoryGb
+        val weightsSizeGb = breakdown.weightMemoryMb / 1024f
 
         val availableVram = profile.vramGb
         val availableRam = profile.ramGb
@@ -60,7 +47,7 @@ object HardwareFitCalculator {
                 Triple(
                     FitGrade.EXCELLENT,
                     100,
-                    "Fits comfortably in VRAM ($reqGbStr GB required / ${profile.vramGb} GB VRAM available)."
+                    "Fits comfortably in VRAM ($reqGbStr GB required [Weights: ${String.format(Locale.US, "%.1f", weightsSizeGb)}GB, KV-Cache: ${breakdown.kvCacheMemoryMb}MB] / ${profile.vramGb} GB VRAM)."
                 )
             }
             availableVram > 0f && totalMemoryRequiredGb > availableVram && totalMemoryRequiredGb <= totalAvailableMem * 0.90f -> {
@@ -99,8 +86,8 @@ object HardwareFitCalculator {
             fitGrade = fitGrade,
             requiredVramGb = if (fitGrade == FitGrade.EXCELLENT && availableVram > 0f) totalMemoryRequiredGb else availableVram,
             requiredRamGb = (totalMemoryRequiredGb - availableVram).coerceAtLeast(0f),
-            estimatedTokensPerSec = 0f, // Explicitly excluded for now
-            estimatedTtftMs = 0f,       // Explicitly excluded for now
+            estimatedTokensPerSec = 0f,
+            estimatedTtftMs = 0f,
             offloadPercentage = offloadPct,
             explanation = explanation,
             profileName = profile.name

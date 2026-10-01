@@ -8,17 +8,31 @@ import androidx.room.RoomDatabase
 @Database(
     entities = [
         ModelEntity::class,
+        CanonicalModelEntity::class,
+        ModelFamilyEntity::class,
+        ModelAliasEntity::class,
+        BenchmarkDefinitionEntity::class,
+        BenchmarkVersionEntity::class,
+        BenchmarkResultEntity::class,
+        ProviderEntity::class,
+        ProviderDeploymentEntity::class,
+        PricingRecordEntity::class,
+        LocalBenchmarkResultEntity::class,
         WatchlistEntity::class,
         DownloadJobEntity::class,
         HardwareProfileEntity::class,
         DeviceTargetEntity::class,
         LocalModelEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun modelDao(): ModelDao
+    abstract fun canonicalModelDao(): CanonicalModelDao
+    abstract fun benchmarkDao(): BenchmarkDao
+    abstract fun providerDao(): ProviderDao
+    abstract fun localBenchmarkDao(): LocalBenchmarkDao
     abstract fun watchlistDao(): WatchlistDao
     abstract fun downloadJobDao(): DownloadJobDao
     abstract fun hardwareProfileDao(): HardwareProfileDao
