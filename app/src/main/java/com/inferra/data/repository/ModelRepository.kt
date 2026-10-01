@@ -9,15 +9,18 @@ import com.inferra.data.network.HuggingFaceApi
 import com.inferra.data.network.NetworkToDomainMapper
 import com.inferra.domain.model.AiModel
 import com.inferra.domain.model.CapabilityMatrix
+import com.inferra.domain.model.CanonicalModel
 import com.inferra.domain.model.LicenseType
 import com.inferra.domain.model.LineageInfo
 import com.inferra.domain.model.Modality
 import com.inferra.domain.model.ModelTask
+import com.inferra.domain.usecase.CanonicalModelResolver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 class ModelRepository(
@@ -36,6 +39,11 @@ class ModelRepository(
         return if (token.isNotBlank()) {
             if (token.startsWith("Bearer ", ignoreCase = true)) token else "Bearer $token"
         } else null
+    }
+
+    suspend fun getCanonicalModel(id: String): CanonicalModel {
+        val canonicalId = CanonicalModelResolver.resolveCanonicalId(id)
+        return CanonicalModelResolver.getCanonicalModel(canonicalId, fallbackDisplayName = id)
     }
 
     suspend fun getModels(forceRefresh: Boolean = false, limit: Int = 40, page: Int = 0): List<AiModel> = withContext(Dispatchers.IO) {
