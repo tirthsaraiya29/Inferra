@@ -137,7 +137,7 @@ fun CompareScreen(
                                     .padding(horizontal = 20.dp),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
-                                models.forEach { model ->
+                                models.forEach { (_, displayName, organization, _, _, license) ->
                                     Box(modifier = Modifier.width(220.dp)) {
                                         Card(
                                             shape = RoundedCornerShape(12.dp),
@@ -146,19 +146,19 @@ fun CompareScreen(
                                         ) {
                                             Column(modifier = Modifier.padding(16.dp)) {
                                                 Text(
-                                                    text = model.organization,
+                                                    text = organization,
                                                     style = MaterialTheme.typography.labelSmall,
                                                     color = MaterialTheme.colorScheme.primary
                                                 )
                                                 Spacer(modifier = Modifier.height(4.dp))
                                                 Text(
-                                                    text = model.displayName,
+                                                    text = displayName,
                                                     style = MaterialTheme.typography.titleMedium,
                                                     color = MaterialTheme.colorScheme.onSurface
                                                 )
                                                 Spacer(modifier = Modifier.height(6.dp))
                                                 Text(
-                                                    text = model.license ?: "Standard",
+                                                    text = license ?: "Standard",
                                                     style = MaterialTheme.typography.labelSmall,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                                 )

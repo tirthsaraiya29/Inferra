@@ -80,26 +80,26 @@ class SearchViewModel(
     }
 
     fun loadNextPage() {
-        val state = _uiState.value
-        if (state.isLoading || state.isLoadingMore || !state.canLoadMore) return
+        val (query, isLoading, isLoadingMore, currentPage, canLoadMore, searchResults, selectedTask, maxParamsBillion, isGgufOnly, activeHardwareProfile) = _uiState.value
+        if (isLoading || isLoadingMore || !canLoadMore) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingMore = true) }
             try {
-                val nextPage = state.currentPage + 1
+                val nextPage = currentPage + 1
                 val newResults = modelRepository.searchModels(
-                    query = state.query,
-                    selectedTask = state.selectedTask,
-                    maxParams = state.maxParamsBillion,
-                    isGgufOnly = state.isGgufOnly,
+                    query = query,
+                    selectedTask = selectedTask,
+                    maxParams = maxParamsBillion,
+                    isGgufOnly = isGgufOnly,
                     page = nextPage
                 )
 
-                val existingIds = state.searchResults.map { it.id }.toSet()
+                val existingIds = searchResults.map { it.id }.toSet()
                 val distinctNew = newResults.filter { !existingIds.contains(it.id) }
-                val combined = state.searchResults + distinctNew
+                val combined = searchResults + distinctNew
 
-                val profile = state.activeHardwareProfile ?: hardwareRepository.getActiveProfile()
+                val profile = activeHardwareProfile ?: hardwareRepository.getActiveProfile()
                 val compMap = if (profile != null) {
                     combined.associateBy(keySelector = { it.id }) { model ->
                         HardwareFitCalculator.calculate(model, model.quantizations.firstOrNull(), profile)

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
@@ -215,9 +216,8 @@ fun SearchScreen(
                     contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 110.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    items(state.searchResults.size, key = { state.searchResults[it].id }) { idx ->
-                        val model = state.searchResults[idx]
-                        if (idx >= state.searchResults.size - 2 && !state.isLoadingMore && state.canLoadMore) {
+                    itemsIndexed(items = state.searchResults, key = { _, item -> item.id }) { idx, model ->
+                        if ((idx >= state.searchResults.size - 2) && !state.isLoadingMore && state.canLoadMore) {
                             LaunchedEffect(idx) {
                                 viewModel.loadNextPage()
                             }

@@ -13,12 +13,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 
-data class CompareViewState(
-    val selectedModelIds: List<String> = emptyList()
-)
-
 class CompareViewModel(
-    private val modelRepository: ModelRepository
+    private val modelRepository: ModelRepository,
 ) : ViewModel() {
 
     private val _selectedIds = MutableStateFlow<List<String>>(emptyList())
@@ -32,7 +28,7 @@ class CompareViewModel(
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = UiState.Loading
+            initialValue = UiState.Loading,
         )
 
     fun toggleModelSelection(modelId: String) {
