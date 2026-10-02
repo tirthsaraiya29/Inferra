@@ -2,6 +2,7 @@ package com.inferra.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,6 +21,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -30,22 +33,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.inferra.ui.theme.AccentAzure
-import com.inferra.ui.theme.GlassBorder
-import com.inferra.ui.theme.GlassBorderFocused
-import com.inferra.ui.theme.GlassHover
-import com.inferra.ui.theme.GlassMaterial
-import com.inferra.ui.theme.InkBg
-import com.inferra.ui.theme.InkCard
-import com.inferra.ui.theme.TextMuted
-import com.inferra.ui.theme.TextPrimary
 
 @Composable
 fun LiquidGlassBackground(
@@ -55,7 +48,7 @@ fun LiquidGlassBackground(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(InkBg)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         content()
     }
@@ -65,8 +58,8 @@ fun LiquidGlassBackground(
 fun GlassCard(
     modifier: Modifier = Modifier,
     shape: Shape = RoundedCornerShape(16.dp),
-    backgroundColor: Color = InkCard,
-    borderColor: Color = GlassBorder,
+    backgroundColor: Color = MaterialTheme.colorScheme.surface,
+    borderColor: Color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
     borderWidth: Dp = 1.dp,
     onClick: (() -> Unit)? = null,
     content: @Composable BoxScope.() -> Unit
@@ -79,29 +72,17 @@ fun GlassCard(
         label = "glassCardScale"
     )
 
-    val currentFill = if (isPressed) GlassHover else backgroundColor
-
-    Box(
-        modifier = modifier
-            .scale(scaleAnim)
-            .clip(shape)
-            .background(currentFill)
-            .border(
-                width = borderWidth,
-                color = borderColor,
-                shape = shape
-            )
-            .then(
-                if (onClick != null) {
-                    Modifier.clickable(
-                        interactionSource = interactionSource,
-                        indication = null,
-                        onClick = onClick
-                    )
-                } else Modifier
-            ),
-        content = content
-    )
+    Surface(
+        modifier = modifier.scale(scaleAnim),
+        shape = shape,
+        color = backgroundColor,
+        border = BorderStroke(borderWidth, borderColor),
+        onClick = onClick ?: {},
+        enabled = onClick != null,
+        interactionSource = interactionSource
+    ) {
+        Box(content = content)
+    }
 }
 
 @Composable
@@ -110,7 +91,7 @@ fun GlassButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     shape: Shape = RoundedCornerShape(12.dp),
-    accentColor: Color = AccentAzure,
+    accentColor: Color = MaterialTheme.colorScheme.primary,
     content: @Composable RowScope.() -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -138,6 +119,7 @@ fun GlassButton(
                 enabled = enabled,
                 interactionSource = interactionSource,
                 indication = null,
+                role = Role.Button,
                 onClick = onClick
             )
             .padding(horizontal = 16.dp, vertical = 10.dp),
@@ -156,29 +138,31 @@ fun GlassChip(
     isSelected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    accentColor: Color = AccentAzure
+    accentColor: Color = MaterialTheme.colorScheme.primary
 ) {
-    val fill = if (isSelected) accentColor.copy(alpha = 0.18f) else GlassMaterial
-    val border = if (isSelected) accentColor.copy(alpha = 0.5f) else GlassBorder
-    val textColor = if (isSelected) TextPrimary else TextMuted
+    val fill = if (isSelected) accentColor.copy(alpha = 0.18f) else MaterialTheme.colorScheme.surfaceVariant
+    val border = if (isSelected) accentColor.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+    val textColor = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
 
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(24.dp))
-            .background(fill)
-            .border(1.dp, border, RoundedCornerShape(24.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-        contentAlignment = Alignment.Center
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(24.dp),
+        color = fill,
+        border = BorderStroke(1.dp, border),
+        onClick = onClick
     ) {
-        Text(
-            text = text,
-            style = TextStyle(
-                fontSize = 13.sp,
-                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                color = textColor
+        Box(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                    color = textColor
+                )
             )
-        )
+        }
     }
 }
 
@@ -191,11 +175,11 @@ fun GlassTextField(
     leadingIcon: (@Composable () -> Unit)? = null,
     trailingIcon: (@Composable () -> Unit)? = null
 ) {
-    GlassCard(
+    Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        backgroundColor = InkCard,
-        borderColor = GlassBorderFocused
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
     ) {
         Row(
             modifier = Modifier
@@ -205,25 +189,30 @@ fun GlassTextField(
         ) {
             if (leadingIcon != null) {
                 leadingIcon()
-                Box(modifier = Modifier.padding(end = 12.dp))
+                Spacer(modifier = Modifier.width(12.dp))
             }
             Box(modifier = Modifier.weight(1f)) {
                 if (value.isEmpty()) {
                     Text(
                         text = placeholderText,
-                        style = TextStyle(color = TextMuted, fontSize = 14.sp)
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     )
                 }
                 BasicTextField(
                     value = value,
                     onValueChange = onValueChange,
                     singleLine = true,
-                    textStyle = TextStyle(color = TextPrimary, fontSize = 14.sp),
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(
+                        color = MaterialTheme.colorScheme.onSurface
+                    ),
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
             if (trailingIcon != null) {
-                Box(modifier = Modifier.padding(start = 12.dp))
+                Spacer(modifier = Modifier.width(12.dp))
                 trailingIcon()
             }
         }
@@ -234,17 +223,19 @@ fun GlassTextField(
 fun GlassBadge(
     text: String,
     modifier: Modifier = Modifier,
-    color: Color = AccentAzure,
+    color: Color = MaterialTheme.colorScheme.primary,
     showDot: Boolean = false
 ) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(color.copy(alpha = 0.12f))
-            .border(0.5.dp, color.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
-            .padding(horizontal = 8.dp, vertical = 4.dp)
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(6.dp),
+        color = color.copy(alpha = 0.12f),
+        border = BorderStroke(0.5.dp, color.copy(alpha = 0.35f))
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             if (showDot) {
                 Box(
                     modifier = Modifier
@@ -256,10 +247,8 @@ fun GlassBadge(
             }
             Text(
                 text = text,
-                style = TextStyle(
-                    fontSize = 11.sp,
+                style = MaterialTheme.typography.labelSmall.copy(
                     fontWeight = FontWeight.Medium,
-                    fontFamily = FontFamily.Default,
                     color = color
                 )
             )

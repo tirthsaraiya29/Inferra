@@ -7,19 +7,19 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -32,9 +32,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,19 +53,23 @@ fun DiscoveryScreen(
     val catalogState by viewModel.catalogUiState.collectAsState()
     val filterState by viewModel.filterState.collectAsState()
 
+    val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
         Column(
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = statusBarPadding)
         ) {
             // Header Section
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp)
+                    .padding(horizontal = 20.dp, vertical = 12.dp)
             ) {
                 Text(
                     text = "Model Intelligence",
@@ -128,38 +129,39 @@ fun DiscoveryScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Parameter Quick Filter Pills
+                // Parameter Quick Filter Pills with Explicit Keys
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    item {
+                    item(key = "filter_all") {
                         FilterPill(
                             text = "All Models",
                             isSelected = (filterState.minParamsBillion == null) && (filterState.maxParamsBillion == null) && (filterState.isOpenWeightsOnly == null),
-                        ) { viewModel.resetFilters() }
+                            onClick = { viewModel.resetFilters() }
+                        )
                     }
-                    item {
+                    item(key = "filter_open") {
                         FilterPill(
                             text = "Open Weights",
                             isSelected = filterState.isOpenWeightsOnly == true,
                             onClick = { viewModel.onOpenWeightsToggled(if (filterState.isOpenWeightsOnly == true) null else true) }
                         )
                     }
-                    item {
+                    item(key = "filter_frontier") {
                         FilterPill(
                             text = "Frontier (>50B)",
                             isSelected = filterState.minParamsBillion == 50,
                             onClick = { viewModel.onParamsRangeChanged(if (filterState.minParamsBillion == 50) null else 50, null) }
                         )
                     }
-                    item {
+                    item(key = "filter_compact") {
                         FilterPill(
                             text = "Compact (<=32B)",
                             isSelected = filterState.maxParamsBillion == 32,
                             onClick = { viewModel.onParamsRangeChanged(null, if (filterState.maxParamsBillion == 32) null else 32) }
                         )
                     }
-                    item {
+                    item(key = "filter_context") {
                         FilterPill(
                             text = "Long Context (>=128K)",
                             isSelected = filterState.minContextLength == 128000,

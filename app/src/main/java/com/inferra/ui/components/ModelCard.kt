@@ -7,25 +7,21 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.inferra.domain.model.AiModel
 import com.inferra.domain.model.FitGrade
 import com.inferra.domain.model.HardwareCompatibilityResult
-import com.inferra.ui.theme.AccentAzure
 import com.inferra.ui.theme.FitBorderline
 import com.inferra.ui.theme.FitExcellent
 import com.inferra.ui.theme.FitInsufficient
-import com.inferra.ui.theme.GlassBorder
-import com.inferra.ui.theme.TextMuted
-import com.inferra.ui.theme.TextPrimary
-import com.inferra.ui.theme.TextSecondary
 import java.util.Locale
 
 @Composable
@@ -35,10 +31,19 @@ fun ModelCard(
     compatibility: HardwareCompatibilityResult? = null,
     onClick: () -> Unit
 ) {
+    val charSpec = remember(model) {
+        if (model.isMoe) {
+            "${String.format(Locale.US, "%.1f", model.totalParamsBillion)}B MoE · ${String.format(Locale.US, "%.1f", model.activeParamsBillion)}B active"
+        } else if (model.contextLengthTokens >= 131072) {
+            "${String.format(Locale.US, "%.1f", model.totalParamsBillion)}B · ${model.contextLengthTokens / 1024}K context"
+        } else {
+            "${String.format(Locale.US, "%.1f", model.totalParamsBillion)}B parameters"
+        }
+    }
+
     GlassCard(
         modifier = modifier.fillMaxWidth(),
-        onClick = onClick,
-        borderColor = GlassBorder
+        onClick = onClick
     ) {
         Column(
             modifier = Modifier
@@ -48,9 +53,8 @@ fun ModelCard(
             // Creator
             Text(
                 text = model.author,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
-                color = AccentAzure
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
+                color = MaterialTheme.colorScheme.primary
             )
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -58,9 +62,8 @@ fun ModelCard(
             // Model Title
             Text(
                 text = model.name,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -70,11 +73,10 @@ fun ModelCard(
             // Description
             Text(
                 text = model.description,
-                fontSize = 13.sp,
-                color = TextSecondary,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                lineHeight = 18.sp
+                overflow = TextOverflow.Ellipsis
             )
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -85,20 +87,10 @@ fun ModelCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Primary characteristic summary
-                val charSpec = if (model.isMoe) {
-                    "${String.format(Locale.US, "%.1f", model.totalParamsBillion)}B MoE · ${String.format(Locale.US, "%.1f", model.activeParamsBillion)}B active"
-                } else if (model.contextLengthTokens >= 131072) {
-                    "${String.format(Locale.US, "%.1f", model.totalParamsBillion)}B · ${model.contextLengthTokens / 1024}K context"
-                } else {
-                    "${String.format(Locale.US, "%.1f", model.totalParamsBillion)}B parameters"
-                }
-
                 Text(
                     text = charSpec,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = TextMuted
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
+                    color = MaterialTheme.colorScheme.outline
                 )
 
                 if (compatibility != null) {
@@ -106,7 +98,7 @@ fun ModelCard(
                         FitGrade.EXCELLENT -> Pair("Fits device", FitExcellent)
                         FitGrade.BORDERLINE -> Pair("${compatibility.offloadPercentage}% offload", FitBorderline)
                         FitGrade.INSUFFICIENT -> Pair("Requires more RAM", FitInsufficient)
-                        FitGrade.UNKNOWN -> Pair("Fit unverified", TextMuted)
+                        FitGrade.UNKNOWN -> Pair("Fit unverified", MaterialTheme.colorScheme.outline)
                     }
                     GlassBadge(text = fitText, color = fitColor, showDot = true)
                 }

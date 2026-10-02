@@ -9,10 +9,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
@@ -30,11 +33,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.inferra.data.local.AndroidModelWideEntity
 import com.inferra.domain.model.EmptyReason
 import com.inferra.domain.model.UiState
 import com.inferra.ui.components.ExecutiveEmptyState
@@ -45,18 +46,23 @@ fun CompareScreen(
     onNavigateToModel: (String) -> Unit = {},
 ) {
     val matrixState by viewModel.matrixState.collectAsState()
+    val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = statusBarPadding)
+        ) {
             // Screen Header
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp)
+                    .padding(horizontal = 20.dp, vertical = 12.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
@@ -114,19 +120,23 @@ fun CompareScreen(
                 }
 
                 is UiState.Success -> {
-                    val scrollState = rememberScrollState()
+                    val horizontalScrollState = rememberScrollState()
                     val models = state.data
 
                     LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .horizontalScroll(scrollState),
-                        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 110.dp),
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(bottom = 110.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         // Header Row (Model Cards)
                         item {
-                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(horizontalScrollState)
+                                    .padding(horizontal = 20.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
                                 models.forEach { model ->
                                     Box(modifier = Modifier.width(220.dp)) {
                                         Card(
@@ -161,20 +171,34 @@ fun CompareScreen(
 
                         // Parameters
                         item {
-                            SectionHeader("Parameters & Active Context")
-                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                                models.forEach { model ->
-                                    MatrixCell(
-                                        label = "Parameters",
-                                        value = if (model.parameterCount != null) "${model.parameterCount}B" else "N/A"
-                                    )
+                            Column {
+                                SectionHeader("Parameters & Active Context")
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(horizontalScrollState)
+                                        .padding(horizontal = 20.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    models.forEach { model ->
+                                        MatrixCell(
+                                            label = "Parameters",
+                                            value = if (model.parameterCount != null) "${model.parameterCount}B" else "N/A"
+                                        )
+                                    }
                                 }
                             }
                         }
 
                         // Context Window
                         item {
-                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(horizontalScrollState)
+                                    .padding(horizontal = 20.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
                                 models.forEach { model ->
                                     MatrixCell(
                                         label = "Context Window",
@@ -186,19 +210,33 @@ fun CompareScreen(
 
                         // Reasoning & Science Benchmarks
                         item {
-                            SectionHeader("Reasoning & Science Benchmarks")
-                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                                models.forEach { model ->
-                                    MatrixCell(
-                                        label = "MMLU-Pro",
-                                        value = formatScore(model.mmluPro)
-                                    )
+                            Column {
+                                SectionHeader("Reasoning & Science Benchmarks")
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(horizontalScrollState)
+                                        .padding(horizontal = 20.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    models.forEach { model ->
+                                        MatrixCell(
+                                            label = "MMLU-Pro",
+                                            value = formatScore(model.mmluPro)
+                                        )
+                                    }
                                 }
                             }
                         }
 
                         item {
-                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(horizontalScrollState)
+                                    .padding(horizontal = 20.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
                                 models.forEach { model ->
                                     MatrixCell(
                                         label = "GPQA Diamond",
@@ -209,7 +247,13 @@ fun CompareScreen(
                         }
 
                         item {
-                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(horizontalScrollState)
+                                    .padding(horizontal = 20.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
                                 models.forEach { model ->
                                     MatrixCell(
                                         label = "MATH Level 5",
@@ -221,19 +265,33 @@ fun CompareScreen(
 
                         // Software Engineering
                         item {
-                            SectionHeader("Software Engineering")
-                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                                models.forEach { model ->
-                                    MatrixCell(
-                                        label = "SWE-bench Verified",
-                                        value = formatScore(model.sweBenchVerified)
-                                    )
+                            Column {
+                                SectionHeader("Software Engineering")
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(horizontalScrollState)
+                                        .padding(horizontal = 20.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    models.forEach { model ->
+                                        MatrixCell(
+                                            label = "SWE-bench Verified",
+                                            value = formatScore(model.sweBenchVerified)
+                                        )
+                                    }
                                 }
                             }
                         }
 
                         item {
-                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(horizontalScrollState)
+                                    .padding(horizontal = 20.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
                                 models.forEach { model ->
                                     MatrixCell(
                                         label = "LiveCodeBench",
@@ -245,13 +303,21 @@ fun CompareScreen(
 
                         // Human Preference
                         item {
-                            SectionHeader("Human Preference & Leaderboards")
-                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                                models.forEach { model ->
-                                    MatrixCell(
-                                        label = "Chatbot Arena Elo",
-                                        value = if (model.arenaElo != null) "%.0f".format(model.arenaElo) else "—"
-                                    )
+                            Column {
+                                SectionHeader("Human Preference & Leaderboards")
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(horizontalScrollState)
+                                        .padding(horizontal = 20.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    models.forEach { model ->
+                                        MatrixCell(
+                                            label = "Chatbot Arena Elo",
+                                            value = if (model.arenaElo != null) "%.0f".format(model.arenaElo) else "—"
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -268,7 +334,7 @@ private fun SectionHeader(title: String) {
         text = title,
         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
         color = MaterialTheme.colorScheme.onBackground,
-        modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
+        modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
     )
 }
 

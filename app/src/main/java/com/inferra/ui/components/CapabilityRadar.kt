@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -24,13 +25,7 @@ import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.inferra.domain.model.CapabilityMatrix
-import com.inferra.ui.theme.AccentAzure
-import com.inferra.ui.theme.GlassBorder
-import com.inferra.ui.theme.InkCard
-import com.inferra.ui.theme.TextMuted
-import com.inferra.ui.theme.TextPrimary
 import java.util.Locale
 
 @Composable
@@ -38,11 +33,11 @@ fun CapabilityRadar(
     capabilities: CapabilityMatrix,
     modifier: Modifier = Modifier
 ) {
+    val accent = MaterialTheme.colorScheme.primary
+
     GlassCard(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        backgroundColor = InkCard,
-        borderColor = GlassBorder
+        shape = RoundedCornerShape(16.dp)
     ) {
         Column(
             modifier = Modifier
@@ -51,22 +46,21 @@ fun CapabilityRadar(
         ) {
             Text(
                 text = "Capabilities Summary",
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = TextPrimary
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            SkillBar("Coding & Synthesis", capabilities.coding, AccentAzure)
-            SkillBar("Mathematical Proofs", capabilities.math, AccentAzure)
-            SkillBar("Complex Reasoning", capabilities.reasoning, AccentAzure)
-            SkillBar("Agentic Workflows", capabilities.agentic, AccentAzure)
-            SkillBar("Tool & Function Calling", capabilities.toolCalling, AccentAzure)
+            SkillBar("Coding & Synthesis", capabilities.coding, accent)
+            SkillBar("Mathematical Proofs", capabilities.math, accent)
+            SkillBar("Complex Reasoning", capabilities.reasoning, accent)
+            SkillBar("Agentic Workflows", capabilities.agentic, accent)
+            SkillBar("Tool & Function Calling", capabilities.toolCalling, accent)
             if (capabilities.vision > 0f) {
-                SkillBar("Vision & Perception", capabilities.vision, AccentAzure)
+                SkillBar("Vision & Perception", capabilities.vision, accent)
             }
-            SkillBar("Long Context Retention", capabilities.longContext, AccentAzure)
+            SkillBar("Long Context Retention", capabilities.longContext, accent)
         }
     }
 }
@@ -91,14 +85,13 @@ private fun SkillBar(
         ) {
             Text(
                 text = label,
-                fontSize = 13.sp,
-                color = TextPrimary
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = String.format(Locale.US, "%.0f%%", score),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
-                color = TextMuted
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
@@ -109,7 +102,7 @@ private fun SkillBar(
                 .fillMaxWidth()
                 .height(6.dp)
                 .clip(RoundedCornerShape(3.dp))
-                .background(GlassBorder)
+                .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
                 .semantics {
                     progressBarRangeInfo = ProgressBarRangeInfo(
                         current = (score / 100f).coerceIn(0f, 1f),
