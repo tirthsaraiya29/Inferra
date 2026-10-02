@@ -59,7 +59,6 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     DatabaseAssetManager.DB_NAME
                 )
-                .createFromAsset(DatabaseAssetManager.ASSET_NAME)
                 .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
             } catch (e: Exception) {
@@ -70,7 +69,6 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     DatabaseAssetManager.DB_NAME
                 )
-                .createFromAsset(DatabaseAssetManager.ASSET_NAME)
                 .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
             }

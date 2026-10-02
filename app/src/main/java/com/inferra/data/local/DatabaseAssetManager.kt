@@ -17,12 +17,18 @@ object DatabaseAssetManager {
     fun ensureDatabaseAssetCopied(context: Context, forceOverwrite: Boolean = false): Boolean {
         val dbFile = context.getDatabasePath(DB_NAME)
 
-        if (dbFile.exists() && !forceOverwrite) {
+        val success = if (!dbFile.exists() || forceOverwrite) {
+            copyAssetDatabase(context, dbFile)
+        } else {
             Log.d(TAG, "Database $DB_NAME already exists at ${dbFile.absolutePath}")
-            return true
+            true
         }
 
-        return copyAssetDatabase(context, dbFile)
+        if (success && dbFile.exists()) {
+            sanitizeSchema(dbFile)
+        }
+
+        return success
     }
 
     private fun copyAssetDatabase(context: Context, destinationFile: File): Boolean {
@@ -44,10 +50,53 @@ object DatabaseAssetManager {
             }
 
             Log.i(TAG, "Successfully unpacked database asset (${destinationFile.length()} bytes)")
+            sanitizeSchema(destinationFile)
             return true
         } catch (e: IOException) {
             Log.e(TAG, "Failed to copy database asset '$ASSET_NAME': ${e.message}", e)
             return false
+        }
+    }
+
+    private fun sanitizeSchema(dbFile: File) {
+        if (!dbFile.exists()) return
+        try {
+            android.database.sqlite.SQLiteDatabase.openDatabase(
+                dbFile.path,
+                null,
+                android.database.sqlite.SQLiteDatabase.OPEN_READWRITE
+            ).use { db ->
+                db.execSQL("PRAGMA foreign_keys = OFF;")
+                db.beginTransaction()
+                try {
+                    db.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS android_models_temp (
+                            id TEXT NOT NULL PRIMARY KEY,
+                            display_name TEXT NOT NULL,
+                            family_name TEXT,
+                            organization TEXT NOT NULL,
+                            model_type TEXT NOT NULL,
+                            parameter_count INTEGER,
+                            context_length INTEGER,
+                            license TEXT,
+                            is_open_weights INTEGER NOT NULL,
+                            updated_at TEXT NOT NULL
+                        )
+                        """.trimIndent()
+                    )
+                    db.execSQL("INSERT OR IGNORE INTO android_models_temp SELECT * FROM android_models;")
+                    db.execSQL("DROP TABLE android_models;")
+                    db.execSQL("ALTER TABLE android_models_temp RENAME TO android_models;")
+                    db.setTransactionSuccessful()
+                } finally {
+                    db.endTransaction()
+                    db.execSQL("PRAGMA foreign_keys = ON;")
+                }
+            }
+            Log.i(TAG, "Database schema sanitized successfully.")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to sanitize database schema: ${e.message}", e)
         }
     }
 
