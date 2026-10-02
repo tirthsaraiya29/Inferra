@@ -17,12 +17,12 @@ import kotlinx.coroutines.launch
 data class WatchlistUiState(
     val isLoading: Boolean = true,
     val savedModels: List<AiModel> = emptyList(),
-    val compatibilityMap: Map<String, HardwareCompatibilityResult> = emptyMap()
+    val compatibilityMap: Map<String, HardwareCompatibilityResult> = emptyMap(),
 )
 
 class WatchlistViewModel(
     private val modelRepository: ModelRepository,
-    private val hardwareRepository: HardwareRepository
+    private val hardwareRepository: HardwareRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(WatchlistUiState())
@@ -44,18 +44,18 @@ class WatchlistViewModel(
             _uiState.update { it.copy(isLoading = true) }
             val watchlistIds = modelRepository.getWatchlist().first()
             val allModels = modelRepository.getModels()
-            val saved = allModels.filter { watchlistIds.contains(it.id) }
+            val saved = allModels.filter { (id) -> watchlistIds.contains(id) }
 
             val profile = hardwareRepository.getActiveProfile()
-            val compMap = saved.associate { model ->
-                model.id to HardwareFitCalculator.calculate(model, model.quantizations.firstOrNull(), profile)
+            val compMap = saved.associateBy(keySelector = { it.id }) { model ->
+                HardwareFitCalculator.calculate(model, model.quantizations.firstOrNull(), profile)
             }
 
             _uiState.update {
                 it.copy(
                     isLoading = false,
                     savedModels = saved,
-                    compatibilityMap = compMap
+                    compatibilityMap = compMap,
                 )
             }
         }

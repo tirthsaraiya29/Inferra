@@ -37,7 +37,7 @@ import com.inferra.ui.theme.TextSecondary
 @Composable
 fun WatchlistScreen(
     viewModel: WatchlistViewModel,
-    onNavigateToModel: (String) -> Unit
+    onNavigateToModel: (String) -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
 
@@ -93,8 +93,7 @@ fun WatchlistScreen(
                             ModelCard(
                                 model = model,
                                 compatibility = state.compatibilityMap[model.id],
-                                onClick = { onNavigateToModel(model.id) }
-                            )
+                            ) { onNavigateToModel(model.id) }
                         }
                     }
                 }
