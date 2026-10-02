@@ -5,11 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.inferra.data.repository.HardwareRepository
 import com.inferra.data.repository.ModelRepository
 import com.inferra.domain.model.AiModel
-import com.inferra.domain.model.ComparabilityCheckResult
 import com.inferra.domain.model.HardwareCompatibilityResult
 import com.inferra.domain.model.HardwareProfile
-import com.inferra.domain.usecase.BenchmarkRegistry
-import com.inferra.domain.usecase.CanonicalModelResolver
 import com.inferra.domain.usecase.HardwareFitCalculator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,8 +19,7 @@ data class CompareUiState(
     val availableModels: List<AiModel> = emptyList(),
     val selectedModels: List<AiModel> = emptyList(),
     val activeHardwareProfile: HardwareProfile? = null,
-    val compatibilityMap: Map<String, HardwareCompatibilityResult> = emptyMap(),
-    val comparabilityCheck: ComparabilityCheckResult? = null
+    val compatibilityMap: Map<String, HardwareCompatibilityResult> = emptyMap()
 )
 
 class CompareViewModel(
@@ -46,33 +42,9 @@ class CompareViewModel(
             current.add(model)
         }
 
-        val comparability = evaluateComparability(current)
-
         _uiState.update {
             it.copy(
-                selectedModels = current,
-                comparabilityCheck = comparability
-            )
-        }
-    }
-
-    private fun evaluateComparability(models: List<AiModel>): ComparabilityCheckResult? {
-        if (models.size < 2) return null
-        val modelA = models[0]
-        val modelB = models[1]
-        val cidA = CanonicalModelResolver.resolveCanonicalId(modelA.id)
-        val cidB = CanonicalModelResolver.resolveCanonicalId(modelB.id)
-
-        val benchA = BenchmarkRegistry.getStandardBenchmarksForModel(cidA).firstOrNull()
-        val benchB = BenchmarkRegistry.getStandardBenchmarksForModel(cidB).firstOrNull()
-
-        return if (benchA != null && benchB != null) {
-            BenchmarkRegistry.checkComparability(benchA, benchB)
-        } else {
-            ComparabilityCheckResult(
-                isComparable = true,
-                warnings = emptyList(),
-                comparisonNotes = "Empirical evaluations compared across identical standardized benchmarks."
+                selectedModels = current
             )
         }
     }
@@ -88,7 +60,6 @@ class CompareViewModel(
             }
 
             val defaultSelected = models.take(2)
-            val comparability = evaluateComparability(defaultSelected)
 
             _uiState.update {
                 it.copy(
@@ -96,8 +67,7 @@ class CompareViewModel(
                     availableModels = models,
                     selectedModels = defaultSelected,
                     activeHardwareProfile = profile,
-                    compatibilityMap = compMap,
-                    comparabilityCheck = comparability
+                    compatibilityMap = compMap
                 )
             }
         }

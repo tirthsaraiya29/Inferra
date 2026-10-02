@@ -46,7 +46,7 @@ import androidx.core.net.toUri
 import com.inferra.domain.model.EvidenceStrength
 import com.inferra.domain.model.FitGrade
 import com.inferra.domain.model.QualityEvidence
-import com.inferra.ui.components.BenchmarkComparisonChart
+
 import com.inferra.ui.components.GlassBadge
 import com.inferra.ui.components.GlassButton
 import com.inferra.ui.components.GlassCard
@@ -192,14 +192,7 @@ fun ModelDetailScreen(
                     }
                 }
 
-                // Level 3: Canonical Benchmark Evidence Chart
-                if (state.benchmarks.isNotEmpty()) {
-                    item {
-                        Box(modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)) {
-                            BenchmarkComparisonChart(benchmarks = state.benchmarks)
-                        }
-                    }
-                }
+
 
                 // Level 4: Provider Pricing & Performance
                 if (state.providerRows.isNotEmpty()) {
