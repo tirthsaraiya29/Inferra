@@ -27,7 +27,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.inferra.data.local.AppDatabase
 import com.inferra.data.network.HuggingFaceClient
-import com.inferra.data.repository.BenchmarkRepository
+
 import com.inferra.data.repository.CompanionRepository
 import com.inferra.data.repository.DownloadRepository
 import com.inferra.data.repository.HardwareRepository
@@ -72,7 +72,6 @@ fun InferraNavHost(
     val downloadRepository = remember { DownloadRepository(db.downloadJobDao()) }
     val companionRepository = remember { CompanionRepository(db.deviceTargetDao()) }
     val providerRepository = remember { ProviderRepository(db.providerDao()) }
-    val benchmarkRepository = remember { BenchmarkRepository(db.benchmarkDao()) }
     val quantDiscoveryRepository = remember { QuantDiscoveryRepository(HuggingFaceClient.api) }
     val modelDownloader = remember { ModelDownloader(context) }
 
@@ -159,7 +158,6 @@ fun InferraNavHost(
                             downloadRepository = downloadRepository,
                             companionRepository = companionRepository,
                             providerRepository = providerRepository,
-                            benchmarkRepository = benchmarkRepository,
                             quantDiscoveryRepository = quantDiscoveryRepository,
                             modelDownloader = modelDownloader
                         )

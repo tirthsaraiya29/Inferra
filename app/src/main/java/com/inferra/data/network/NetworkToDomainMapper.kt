@@ -58,7 +58,6 @@ object NetworkToDomainMapper {
             likesCount = likes,
             updatedAt = dto.lastModified?.take(10) ?: "Recently",
             quantizations = quantizations,
-            benchmarks = emptyList(), // Real API returns empty if benchmark unverified; no fabricated benchmark generator
             capabilities = CapabilityMatrix(
                 coding = if (tasks.contains(ModelTask.CODING)) 100f else 0f,
                 reasoning = if (tasks.contains(ModelTask.REASONING)) 100f else 0f,

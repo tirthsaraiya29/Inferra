@@ -220,7 +220,6 @@ class ModelRepository(
             likesCount = entity.likesCount,
             updatedAt = entity.updatedAt,
             quantizations = emptyList(),
-            benchmarks = emptyList(),
             capabilities = CapabilityMatrix(80f, 80f, 80f, 0f, 80f, 80f, 80f, 80f),
             lineage = LineageInfo(),
             isFeatured = entity.isFeatured,
