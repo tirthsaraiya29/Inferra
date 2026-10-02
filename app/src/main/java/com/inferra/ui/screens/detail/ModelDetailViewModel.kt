@@ -3,7 +3,6 @@ package com.inferra.ui.screens.detail
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.inferra.data.network.HuggingFaceClient
-import com.inferra.data.repository.BenchmarkRepository
 import com.inferra.data.repository.CompanionRepository
 import com.inferra.data.repository.DownloadRepository
 import com.inferra.data.repository.HardwareRepository
@@ -12,7 +11,6 @@ import com.inferra.data.repository.ModelRepository
 import com.inferra.data.repository.ProviderRepository
 import com.inferra.data.repository.QuantDiscoveryRepository
 import com.inferra.domain.model.AiModel
-import com.inferra.domain.model.BenchmarkResult
 import com.inferra.domain.model.CanonicalModel
 import com.inferra.domain.model.DeviceTarget
 import com.inferra.domain.model.DownloadJob
@@ -20,7 +18,6 @@ import com.inferra.domain.model.HardwareCompatibilityResult
 import com.inferra.domain.model.HardwareProfile
 import com.inferra.domain.model.ProviderMeasurement
 import com.inferra.domain.model.QuantizationInfo
-import com.inferra.domain.usecase.BenchmarkRegistry
 import com.inferra.domain.usecase.CanonicalModelResolver
 import com.inferra.domain.usecase.HardwareFitCalculator
 import com.inferra.ui.components.ProviderRowItem
@@ -37,7 +34,6 @@ data class ModelDetailUiState(
     val isLoading: Boolean = true,
     val model: AiModel? = null,
     val canonicalModel: CanonicalModel? = null,
-    val benchmarks: List<BenchmarkResult> = emptyList(),
     val providerRows: List<ProviderRowItem> = emptyList(),
     val localFilePath: String? = null,
     val activeHardwareProfile: HardwareProfile? = null,
@@ -57,7 +53,6 @@ class ModelDetailViewModel(
     private val downloadRepository: DownloadRepository,
     private val companionRepository: CompanionRepository,
     private val providerRepository: ProviderRepository? = null,
-    private val benchmarkRepository: BenchmarkRepository? = null,
     private val quantDiscoveryRepository: QuantDiscoveryRepository = QuantDiscoveryRepository(HuggingFaceClient.api),
     private val modelDownloader: ModelDownloader? = null
 ) : ViewModel() {
@@ -161,9 +156,6 @@ class ModelDetailViewModel(
                     val canonicalModel = modelRepository.getCanonicalModel(modelId)
                     val canonicalId = canonicalModel.id
 
-                    val benchmarks = benchmarkRepository?.getBenchmarkResultsForCanonicalModel(canonicalId)?.firstOrNull()
-                        ?: BenchmarkRegistry.getStandardBenchmarksForModel(canonicalId)
-
                     val deployments = providerRepository?.getDeploymentsForModel(canonicalId)?.firstOrNull() ?: emptyList()
                     val providerRows = deployments.map { dep ->
                         val pricing = providerRepository?.getPricingForDeployment(dep.id)
@@ -211,7 +203,6 @@ class ModelDetailViewModel(
                             isLoading = false,
                             model = enrichedModel,
                             canonicalModel = canonicalModel,
-                            benchmarks = benchmarks,
                             providerRows = providerRows,
                             localFilePath = localPath,
                             activeHardwareProfile = profile,
