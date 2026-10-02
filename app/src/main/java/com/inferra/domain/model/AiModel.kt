@@ -109,7 +109,6 @@ data class AiModel(
     val likesCount: Long,
     val updatedAt: String,                  // ISO string or formatted date
     val quantizations: List<QuantizationInfo>,
-    val benchmarks: List<BenchmarkScore>,
     val capabilities: CapabilityMatrix,
     val lineage: LineageInfo,
     val isFeatured: Boolean = false,

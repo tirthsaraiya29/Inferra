@@ -64,48 +64,7 @@ data class ModelAliasEntity(
     val aliasTypeStr: String
 )
 
-@Entity(tableName = "benchmark_definitions")
-data class BenchmarkDefinitionEntity(
-    @PrimaryKey val id: String,
-    val name: String,
-    val shortName: String,
-    val categoryStr: String,
-    val description: String,
-    val primaryMetricStr: String,
-    val higherIsBetter: Boolean
-)
 
-@Entity(tableName = "benchmark_versions")
-data class BenchmarkVersionEntity(
-    @PrimaryKey val id: String,
-    val benchmarkId: String,
-    val versionName: String,
-    val releaseDate: String,
-    val specificationUrl: String
-)
-
-@Entity(
-    tableName = "benchmark_results",
-    indices = [Index(value = ["canonicalId"]), Index(value = ["benchmarkVersionId"])]
-)
-data class BenchmarkResultEntity(
-    @PrimaryKey val id: String,
-    val canonicalId: String,
-    val modelRevision: String,
-    val quantizationType: String,
-    val benchmarkVersionId: String,
-    val methodologyId: String,
-    val configurationId: String,
-    val score: Float,
-    val maxScore: Float,
-    val scoreNormalized: Float,
-    val provenanceTypeStr: String,
-    val publisher: String,
-    val sourceUrl: String,
-    val verifiedByInferra: Boolean,
-    val retrievalDate: String,
-    val rawJson: String
-)
 
 @Entity(tableName = "providers")
 data class ProviderEntity(

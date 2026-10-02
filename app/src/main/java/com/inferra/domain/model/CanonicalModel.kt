@@ -16,7 +16,6 @@ enum class ModelVariant {
 enum class AliasType {
     HUGGING_FACE,
     PROVIDER_MODEL_ID,
-    BENCHMARK_NAME,
     DISPLAY_NAME
 }
 

@@ -42,23 +42,7 @@ interface CanonicalModelDao {
     suspend fun insertAliases(aliases: List<ModelAliasEntity>)
 }
 
-@Dao
-interface BenchmarkDao {
-    @Query("SELECT * FROM benchmark_definitions")
-    fun getAllDefinitions(): Flow<List<BenchmarkDefinitionEntity>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertDefinitions(definitions: List<BenchmarkDefinitionEntity>)
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertVersions(versions: List<BenchmarkVersionEntity>)
-
-    @Query("SELECT * FROM benchmark_results WHERE canonicalId = :canonicalId")
-    fun getResultsForCanonicalModel(canonicalId: String): Flow<List<BenchmarkResultEntity>>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertResults(results: List<BenchmarkResultEntity>)
-}
 
 @Dao
 interface ProviderDao {

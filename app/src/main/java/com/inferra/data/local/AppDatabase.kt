@@ -11,9 +11,6 @@ import androidx.room.RoomDatabase
         CanonicalModelEntity::class,
         ModelFamilyEntity::class,
         ModelAliasEntity::class,
-        BenchmarkDefinitionEntity::class,
-        BenchmarkVersionEntity::class,
-        BenchmarkResultEntity::class,
         ProviderEntity::class,
         ProviderDeploymentEntity::class,
         PricingRecordEntity::class,
@@ -29,7 +26,6 @@ import androidx.room.RoomDatabase
 abstract class AppDatabase : RoomDatabase() {
     abstract fun modelDao(): ModelDao
     abstract fun canonicalModelDao(): CanonicalModelDao
-    abstract fun benchmarkDao(): BenchmarkDao
     abstract fun providerDao(): ProviderDao
     abstract fun watchlistDao(): WatchlistDao
     abstract fun downloadJobDao(): DownloadJobDao
