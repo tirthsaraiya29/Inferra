@@ -20,8 +20,8 @@ interface HuggingFaceApi {
         @Query("full") full: Boolean? = true,
         @Query("expand") expand: List<String>? = listOf(
             "downloads", "likes", "pipeline_tag", "tags",
-            "lastModified", "createdAt", "config", "siblings", "cardData"
-        )
+            "lastModified", "createdAt", "config", "siblings", "cardData",
+        ),
     ): List<HuggingFaceModelDto>
 
     @GET("api/models/{id}")
