@@ -133,6 +133,9 @@ fun ModelDetailScreen(
                 is UiState.Empty -> {
                     ExecutiveEmptyState(
                         reason = detailsState.reason,
+                        customTitle = "Model Details Unavailable",
+                        customBody = "The requested model checkpoint is currently being cataloged.",
+                        customButtonLabel = "Back to Catalog",
                         onAction = onBackClick
                     )
                 }
@@ -140,6 +143,9 @@ fun ModelDetailScreen(
                 is UiState.Error -> {
                     ExecutiveEmptyState(
                         reason = EmptyReason.NO_RESULTS,
+                        customTitle = "Error Loading Details",
+                        customBody = detailsState.userMessage,
+                        customButtonLabel = "Back to Catalog",
                         onAction = onBackClick
                     )
                 }

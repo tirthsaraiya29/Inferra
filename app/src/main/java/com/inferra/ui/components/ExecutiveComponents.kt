@@ -326,9 +326,12 @@ fun BenchmarkDomainPill(
 fun ExecutiveEmptyState(
     reason: EmptyReason,
     modifier: Modifier = Modifier,
+    customTitle: String? = null,
+    customBody: String? = null,
+    customButtonLabel: String? = null,
     onAction: (() -> Unit)? = null,
 ) {
-    val (title, body, buttonLabel) = when (reason) {
+    val (defaultTitle, defaultBody, defaultButton) = when (reason) {
         EmptyReason.NO_RESULTS -> Triple(
             "No Matching Models Found",
             "Try broadening your search query or adjusting parameter filters.",
@@ -350,6 +353,10 @@ fun ExecutiveEmptyState(
             "Rebuild Catalog Cache"
         )
     }
+
+    val title = customTitle ?: defaultTitle
+    val body = customBody ?: defaultBody
+    val buttonLabel = customButtonLabel ?: defaultButton
 
     Column(
         modifier = modifier
