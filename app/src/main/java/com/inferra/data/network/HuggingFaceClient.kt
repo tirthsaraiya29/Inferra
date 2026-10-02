@@ -31,11 +31,11 @@ object HuggingFaceClient {
         }
     }
 
-    private fun safeLogE(tag: String, msg: String, tr: Throwable? = null) {
+    private fun safeLogE(msg: String, tr: Throwable? = null) {
         try {
-            Log.e(tag, msg, tr)
+            Log.e(TAG, msg, tr)
         } catch (_: Throwable) {
-            println("[$tag] ERROR: $msg")
+            println("[$TAG] ERROR: $msg")
             tr?.printStackTrace()
         }
     }
@@ -53,7 +53,7 @@ object HuggingFaceClient {
                 response
             } catch (e: Exception) {
                 val duration = System.currentTimeMillis() - startTime
-                safeLogE(TAG, "<-- REQUEST FAILED: ${request.url} after ${duration}ms: ${e.localizedMessage}", e)
+                safeLogE("<-- REQUEST FAILED: ${request.url} after ${duration}ms: ${e.localizedMessage}", e)
                 throw e
             }
         }
@@ -84,7 +84,7 @@ object HuggingFaceClient {
             return try {
                 chain.proceed(request)
             } catch (e: SSLPeerUnverifiedException) {
-                safeLogE(TAG, "SSL Certificate Pinning failed for ${request.url.host}. Falling back to system trust store validation...", e)
+                safeLogE("SSL Certificate Pinning failed for ${request.url.host}. Falling back to system trust store validation...", e)
                 fallbackClientProvider().newCall(request).execute()
             }
         }

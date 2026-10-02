@@ -43,21 +43,22 @@ class QuantDiscoveryRepository(
         // Search HF for related quantization repositories in parallel using async
         val searchTerms = listOf("$modelName GGUF", "$modelName AWQ", "$modelName GPTQ", "$modelName EXL2")
         val searchResults = coroutineScope {
-            searchTerms.map { term ->
+            searchTerms.asSequence().map { term ->
                 async {
                     try {
                         api.getModels(search = term, limit = 10, sort = "downloads")
                     } catch (e: Exception) {
                         safeLogW("Failed searching HF for '$term': ${e.message}")
-                        emptyList<HuggingFaceModelDto>()
+                        emptyList()
                     }
                 }
-            }.flatMap { it.await() }
+            }.toList().flatMap { it.await() }
         }
 
         for (dto in searchResults) {
+            val (dtoId) = dto
             if (isQuantizedVariantOf(dto, modelName, baseId)) {
-                if (reposToInspect.none { it.id.equals(dto.id, ignoreCase = true) }) {
+                if (reposToInspect.none { (id) -> id.equals(dtoId, ignoreCase = true) }) {
                     reposToInspect.add(dto)
                 }
             }
