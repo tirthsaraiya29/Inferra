@@ -1,0 +1,52 @@
+name: Daily Model Intelligence Pipeline
+
+on:
+  schedule:
+    # Trigger nightly at 02:00 UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      strict_mode:
+        description: 'Enforce strict validation checks'
+        required: false
+        default: 'false'
+
+jobs:
+  ingest-validate-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Test Suite
+        run: |
+          pytest -v tests/
+
+      - name: Execute Inferra Ingestion & Validation
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          INFERRA_LOG_LEVEL: INFO
+          INFERRA_STRICT_VALIDATION: ${{ github.event.inputs.strict_mode == 'true' && '1' || '0' }}
+        run: |
+          python inferra_data.py run
+
+      - name: Upload Release Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: inferra-android-release
+          path: data/releases/**/
+          retention-days: 14
