@@ -54,7 +54,7 @@ import com.inferra.ui.theme.TextSecondary
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HardwareScreen(
-    viewModel: HardwareViewModel
+    viewModel: HardwareViewModel,
 ) {
     val state by viewModel.uiState.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }

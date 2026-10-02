@@ -23,11 +23,11 @@ object HuggingFaceClient {
         prettyPrint = false
     }
 
-    private fun safeLogD(tag: String, msg: String) {
+    private fun safeLogD(msg: String) {
         try {
-            Log.d(tag, msg)
+            Log.d(TAG, msg)
         } catch (_: Throwable) {
-            println("[$tag] $msg")
+            println("[$TAG] $msg")
         }
     }
 
@@ -44,12 +44,12 @@ object HuggingFaceClient {
         override fun intercept(chain: Interceptor.Chain): Response {
             val request = chain.request()
             val startTime = System.currentTimeMillis()
-            safeLogD(TAG, "--> SENDING REQUEST: ${request.method} ${request.url}")
+            safeLogD("--> SENDING REQUEST: ${request.method} ${request.url}")
 
             return try {
                 val response = chain.proceed(request)
                 val duration = System.currentTimeMillis() - startTime
-                safeLogD(TAG, "<-- RECEIVED RESPONSE (${response.code} ${response.message}) from ${request.url} in ${duration}ms [Headers: ${response.headers.size}]")
+                safeLogD("<-- RECEIVED RESPONSE (${response.code} ${response.message}) from ${request.url} in ${duration}ms [Headers: ${response.headers.size}]")
                 response
             } catch (e: Exception) {
                 val duration = System.currentTimeMillis() - startTime

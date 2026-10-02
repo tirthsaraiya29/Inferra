@@ -47,7 +47,7 @@ object MemoryEstimationEngine {
         }
 
         // 1. Model Weights Memory
-        val weightMemoryMb = if (quantization != null && quantization.fileSizeBytes > 0L) {
+        val weightMemoryMb = if ((quantization != null) && (quantization.fileSizeBytes > 0L)) {
             (quantization.fileSizeBytes / (1024 * 1024)).toInt()
         } else {
             (model.totalParamsBillion * bytesPerParam * 1024).toInt()

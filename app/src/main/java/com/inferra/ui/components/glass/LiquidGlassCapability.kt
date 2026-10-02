@@ -31,7 +31,7 @@ data class LiquidGlassCapabilityState(
     val isReducedMotionEnabled: Boolean,
     val isReducedTransparencyEnabled: Boolean,
     val supportsAgsl: Boolean,
-    val supportsHardwareBlur: Boolean
+    val supportsHardwareBlur: Boolean,
 )
 
 @Composable
@@ -60,7 +60,7 @@ fun rememberLiquidGlassCapability(): State<LiquidGlassCapabilityState> {
 }
 
 private fun calculateCapabilityState(context: Context): LiquidGlassCapabilityState {
-    val supportsHardwareBlur = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S // API 31+
+    val supportsHardwareBlur = true // API 31+ is minSdkVersion
     val supportsAgsl = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU // API 33+ (AGSL RuntimeShader)
 
     val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
@@ -76,7 +76,7 @@ private fun calculateCapabilityState(context: Context): LiquidGlassCapabilitySta
     } catch (_: Exception) {
         1.0f
     }
-    val isReducedMotionEnabled = animatorScale == 0.0f || isTouchExplorationEnabled
+    val isReducedMotionEnabled = (animatorScale == 0.0f) || isTouchExplorationEnabled
 
     // Check system reduced transparency (if present in Settings or accessibility)
     val isReducedTransparencyEnabled = try {
@@ -91,9 +91,8 @@ private fun calculateCapabilityState(context: Context): LiquidGlassCapabilitySta
 
     val tier = when {
         isReducedTransparencyEnabled -> LiquidGlassTier.BASIC
-        supportsAgsl && supportsHardwareBlur -> LiquidGlassTier.FULL
-        supportsHardwareBlur -> LiquidGlassTier.REDUCED
-        else -> LiquidGlassTier.BASIC
+        supportsAgsl -> LiquidGlassTier.FULL
+        else -> LiquidGlassTier.REDUCED
     }
 
     return LiquidGlassCapabilityState(
@@ -101,6 +100,6 @@ private fun calculateCapabilityState(context: Context): LiquidGlassCapabilitySta
         isReducedMotionEnabled = isReducedMotionEnabled,
         isReducedTransparencyEnabled = isReducedTransparencyEnabled,
         supportsAgsl = supportsAgsl,
-        supportsHardwareBlur = supportsHardwareBlur
+        supportsHardwareBlur = supportsHardwareBlur,
     )
 }

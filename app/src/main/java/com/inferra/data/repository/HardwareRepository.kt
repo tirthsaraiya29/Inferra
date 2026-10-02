@@ -1,7 +1,6 @@
 package com.inferra.data.repository
 
 import android.content.Context
-import android.os.Build
 import com.inferra.data.hardware.HardwareDetector
 import com.inferra.data.local.HardwareProfileDao
 import com.inferra.data.local.HardwareProfileEntity
@@ -12,11 +11,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
-import java.util.Locale
 
 class HardwareRepository(
     private val context: Context,
-    private val profileDao: HardwareProfileDao
+    private val profileDao: HardwareProfileDao,
 ) {
     val profilesFlow: Flow<List<HardwareProfile>> = profileDao.getAllProfiles().map { entities ->
         entities.map { it.toDomain() }
@@ -50,7 +48,7 @@ class HardwareRepository(
                 osName = "Android 15",
                 preferredRuntime = "llama.cpp (Vulkan)",
                 availableStorageGb = 64f,
-                isLocalDevice = true
+                isLocalDevice = true,
             )
         }
     }

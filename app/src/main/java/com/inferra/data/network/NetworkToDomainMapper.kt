@@ -71,7 +71,7 @@ object NetworkToDomainMapper {
             lineage = LineageInfo(
                 baseModelId = extractBaseModelId(dto.tags, modelNameStr, fullId)
             ),
-            isFeatured = downloads > 500000 || likes > 2000,
+            isFeatured = (downloads > 500000) || (likes > 2000),
             isTrending = likes > 500,
             isNew = dto.createdAt?.contains("2025") == true || dto.createdAt?.contains("2026") == true,
             repoUrl = "https://huggingface.co/$fullId",
@@ -197,7 +197,7 @@ object NetworkToDomainMapper {
         if (licTag != null) {
             val licName = licTag.removePrefix("license:")
             return when {
-                licName.contains("apache-2.0", true) -> Pair(LicenseType.APACHE_2, "Apache 2.0")
+                licName.contains("apache-2.0", ignoreCase = true) -> Pair(LicenseType.APACHE_2, "Apache 2.0")
                 licName.contains("mit", true) -> Pair(LicenseType.MIT, "MIT License")
                 licName.contains("llama", true) -> Pair(LicenseType.LLAMA_COMMUNITY, "Llama License")
                 licName.contains("qwen", true) -> Pair(LicenseType.QWEN_RESEARCH, "Qwen License")
@@ -304,9 +304,9 @@ object NetworkToDomainMapper {
         }
 
         return if (parts.isNotEmpty()) {
-            "Open-weight model by $author (${parts.joinToString(" • ")}). Live statistics: ${downloads} downloads, ${likes} likes."
+            "Open-weight model by $author (${parts.joinToString(" • ")}). Live statistics: $downloads downloads, $likes likes."
         } else {
-            "Model hosted on Hugging Face Hub by $author. Live statistics: ${downloads} downloads, ${likes} likes."
+            "Model hosted on Hugging Face Hub by $author. Live statistics: $downloads downloads, $likes likes."
         }
     }
 }

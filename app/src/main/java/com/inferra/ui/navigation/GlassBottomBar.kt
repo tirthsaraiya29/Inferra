@@ -18,7 +18,7 @@ import com.inferra.ui.components.glass.rememberNavigationScrollState
 data class NavItem(
     val route: String,
     val label: String,
-    val icon: ImageVector
+    val icon: ImageVector,
 )
 
 val bottomNavItems = listOf(
@@ -26,16 +26,16 @@ val bottomNavItems = listOf(
     NavItem(Screen.Search.route, "Search", Icons.Default.Search),
     NavItem(Screen.Compare.route, "Compare", Icons.AutoMirrored.Filled.CompareArrows),
     NavItem(Screen.Hardware.route, "Hardware", Icons.Default.DeveloperBoard),
-    NavItem(Screen.Downloads.route, "Downloads", Icons.Default.Download)
+    NavItem(Screen.Downloads.route, "Downloads", Icons.Default.Download),
 )
 
 @Composable
 fun GlassBottomBar(
     currentRoute: String?,
     onNavigate: (String) -> Unit,
+    modifier: Modifier = Modifier,
     scrollState: NavigationScrollState = rememberNavigationScrollState(),
     gestureState: NavigationGestureState = rememberNavigationGestureState(),
-    modifier: Modifier = Modifier
 ) {
     FloatingNavigationBar(
         items = bottomNavItems,
@@ -43,6 +43,6 @@ fun GlassBottomBar(
         onNavigate = onNavigate,
         scrollState = scrollState,
         gestureState = gestureState,
-        modifier = modifier
+        modifier = modifier,
     )
 }

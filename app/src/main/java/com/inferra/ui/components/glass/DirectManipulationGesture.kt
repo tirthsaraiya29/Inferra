@@ -32,9 +32,9 @@ fun Modifier.directManipulationGesture(
             val event = awaitPointerEvent(pass = PointerEventPass.Main)
             val dragEvent = event.changes.firstOrNull { it.id == down.id }
 
-            if (dragEvent != null && dragEvent.pressed) {
+            if ((dragEvent != null) && dragEvent.pressed) {
                 val dx = dragEvent.positionChange().x
-                if (dx != 0f || isDragging) {
+                if ((dx != 0f) || isDragging) {
                     isDragging = true
                     dragEvent.consume()
                     gestureState.onDrag(
@@ -42,11 +42,11 @@ fun Modifier.directManipulationGesture(
                         currentX = currentX,
                         itemWidthPx = itemWidthPx,
                         itemCount = itemCount,
-                        scope = scope
+                        scope = scope,
                     )
                     currentX += dx
                 }
-            } else if (dragEvent != null && !dragEvent.pressed) {
+            } else if (dragEvent != null) {
                 // Pointer released
                 scrollState.isGestureActive = false
                 if (isDragging) {
@@ -55,7 +55,7 @@ fun Modifier.directManipulationGesture(
                         itemWidthPx = itemWidthPx,
                         onNavigateToIndex = onNavigateToIndex,
                         scope = scope,
-                        isReducedMotion = isReducedMotion
+                        isReducedMotion = isReducedMotion,
                     )
                 } else {
                     // Quick tap released -> compute candidate from touch position and navigate

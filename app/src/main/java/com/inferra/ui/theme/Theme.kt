@@ -1,50 +1,74 @@
 package com.inferra.ui.theme
 
 import android.app.Activity
-import android.graphics.Color
+import android.graphics.Color as AndroidColor
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private val DarkColorScheme = darkColorScheme(
-    primary = AccentAzure,
+private val ExecutiveDarkColorScheme = darkColorScheme(
+    primary = KleinBlueSecondary,
+    onPrimary = CrispTextPrimary,
+    primaryContainer = ElevatedSurfaceDark,
+    onPrimaryContainer = CrispTextPrimary,
     secondary = AccentMuted,
-    tertiary = FitExcellent,
-    background = InkBg,
-    surface = InkSurface,
-    surfaceVariant = InkCard,
-    onPrimary = InkBg,
-    onSecondary = TextPrimary,
-    onTertiary = InkBg,
-    onBackground = TextPrimary,
-    onSurface = TextPrimary,
-    onSurfaceVariant = TextSecondary
+    onSecondary = CrispTextPrimary,
+    tertiary = SageGreenDark,
+    background = ObsidianBg,
+    onBackground = CrispTextPrimary,
+    surface = SlateSurface,
+    onSurface = CrispTextPrimary,
+    surfaceVariant = ElevatedSurfaceDark,
+    onSurfaceVariant = CrispTextSecondary,
+    outline = BorderDark,
+    outlineVariant = BorderDark,
+)
+
+private val ExecutiveLightColorScheme = lightColorScheme(
+    primary = KleinBluePrimary,
+    onPrimary = PorcelainSurface,
+    primaryContainer = ElevatedSurfaceLight,
+    onPrimaryContainer = CharcoalTextPrimary,
+    secondary = AccentMuted,
+    onSecondary = PorcelainSurface,
+    tertiary = SageGreen,
+    background = PaperWhiteBg,
+    onBackground = CharcoalTextPrimary,
+    surface = PorcelainSurface,
+    onSurface = CharcoalTextPrimary,
+    surfaceVariant = ElevatedSurfaceLight,
+    onSurfaceVariant = SlateTextSecondary,
+    outline = BorderLight,
+    outlineVariant = BorderLight,
 )
 
 @Composable
 fun InferraTheme(
-    content: @Composable () -> Unit
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    content: @Composable () -> Unit,
 ) {
-    val colorScheme = DarkColorScheme
+    val colorScheme = if (darkTheme) ExecutiveDarkColorScheme else ExecutiveLightColorScheme
     val view = LocalView.current
 
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            // Set system bars transparent so content extends behind status bar and floating glass bar
-            window.statusBarColor = Color.TRANSPARENT
-            window.navigationBarColor = Color.TRANSPARENT
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
-            WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = false
+            window.statusBarColor = AndroidColor.TRANSPARENT
+            window.navigationBarColor = AndroidColor.TRANSPARENT
+            val insetsController = WindowCompat.getInsetsController(window, view)
+            insetsController.isAppearanceLightStatusBars = !darkTheme
+            insetsController.isAppearanceLightNavigationBars = !darkTheme
         }
     }
 
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
-        content = content
+        content = content,
     )
 }

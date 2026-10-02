@@ -46,7 +46,7 @@ class ModelDownloader(
 
     suspend fun startDownload(
         job: DownloadJob,
-        customStoragePath: String? = null
+        customStoragePath: String? = null,
     ): Unit = withContext(Dispatchers.IO) {
         val url = job.manifest.sourceUrl
         val fileName = job.manifest.fileName
@@ -56,13 +56,13 @@ class ModelDownloader(
         // Pre-flight disk space verification
         val expectedBytes = job.manifest.expectedSizeBytes
         val availableDiskBytes = targetDir.usableSpace
-        if (expectedBytes > 0L && availableDiskBytes > 0L && availableDiskBytes < expectedBytes) {
+        if ((expectedBytes > 0L) && (availableDiskBytes > 0L) && (availableDiskBytes < expectedBytes)) {
             val reqGb = String.format(Locale.US, "%.1f", expectedBytes / (1024f * 1024f * 1024f))
             val availGb = String.format(Locale.US, "%.1f", availableDiskBytes / (1024f * 1024f * 1024f))
             updateJobProgress(
                 job.copy(
                     status = DownloadStatus.FAILED,
-                    errorMessage = "Insufficient storage space ($reqGb GB required, $availGb GB available)"
+                    errorMessage = "Insufficient storage space ($reqGb GB required, $availGb GB available)",
                 )
             )
             return@withContext

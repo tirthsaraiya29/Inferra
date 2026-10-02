@@ -159,7 +159,7 @@ fun SearchScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Results List
-            if (state.errorMessage != null && !state.isLoading) {
+            if ((state.errorMessage != null) && !state.isLoading) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -225,8 +225,7 @@ fun SearchScreen(
                         ModelCard(
                             model = model,
                             compatibility = state.compatibilityMap[model.id],
-                            onClick = { onNavigateToModel(model.id) }
-                        )
+                        ) { onNavigateToModel(model.id) }
                     }
 
                     if (state.isLoadingMore) {

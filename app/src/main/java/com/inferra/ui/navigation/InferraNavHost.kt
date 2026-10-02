@@ -1,13 +1,18 @@
 package com.inferra.ui.navigation
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -19,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
+import androidx.core.net.toUri
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -27,14 +33,11 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.inferra.data.local.AppDatabase
 import com.inferra.data.network.HuggingFaceClient
-
 import com.inferra.data.repository.CompanionRepository
 import com.inferra.data.repository.DownloadRepository
 import com.inferra.data.repository.HardwareRepository
-import com.inferra.data.repository.ModelDownloader
 import com.inferra.data.repository.ModelRepository
 import com.inferra.data.repository.ProviderRepository
-import com.inferra.data.repository.QuantDiscoveryRepository
 import com.inferra.data.repository.SettingsRepository
 import com.inferra.ui.components.glass.BackdropCaptureContainer
 import com.inferra.ui.components.glass.rememberNavigationGestureState
@@ -67,13 +70,39 @@ fun InferraNavHost(
 
     // Repositories
     val settingsRepository = remember { SettingsRepository(context) }
-    val modelRepository = remember { ModelRepository(HuggingFaceClient.api, db.modelDao(), db.watchlistDao(), settingsRepository) }
+    val modelRepository = remember {
+        ModelRepository(
+            api = HuggingFaceClient.api,
+            modelDao = db.modelDao(),
+            androidModelDao = db.androidModelDao(),
+            watchlistDao = db.watchlistDao(),
+            settingsRepository = settingsRepository
+        )
+    }
     val hardwareRepository = remember { HardwareRepository(context, db.hardwareProfileDao()) }
     val downloadRepository = remember { DownloadRepository(db.downloadJobDao()) }
     val companionRepository = remember { CompanionRepository(db.deviceTargetDao()) }
     val providerRepository = remember { ProviderRepository(db.providerDao()) }
-    val quantDiscoveryRepository = remember { QuantDiscoveryRepository(HuggingFaceClient.api) }
-    val modelDownloader = remember { ModelDownloader(context) }
+
+    val launchUrl: (String) -> Unit = remember(context) {
+        { url ->
+            try {
+                val customTabsIntent = CustomTabsIntent.Builder().build()
+                customTabsIntent.launchUrl(context, url.toUri())
+            } catch (_: ActivityNotFoundException) {
+                try {
+                    val fallbackIntent = Intent(Intent.ACTION_VIEW, url.toUri())
+                    context.startActivity(fallbackIntent)
+                } catch (_: Exception) {
+                    Toast.makeText(context, "Unable to open browser for $url", Toast.LENGTH_SHORT).show()
+                }
+            } catch (_: SecurityException) {
+                Toast.makeText(context, "Permission error launching URL", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(context, "Failed to launch link: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     // Seed default providers on launch
     LaunchedEffect(Unit) {
@@ -81,9 +110,9 @@ fun InferraNavHost(
     }
 
     // Shared ViewModels
-    val discoveryViewModel = remember { DiscoveryViewModel(modelRepository, hardwareRepository) }
+    val discoveryViewModel = remember { DiscoveryViewModel(modelRepository) }
     val searchViewModel = remember { SearchViewModel(modelRepository, hardwareRepository) }
-    val compareViewModel = remember { CompareViewModel(modelRepository, hardwareRepository) }
+    val compareViewModel = remember { CompareViewModel(modelRepository) }
     val hardwareViewModel = remember { HardwareViewModel(hardwareRepository) }
     val downloadsViewModel = remember { DownloadsViewModel(downloadRepository, companionRepository, db.localModelDao()) }
     val watchlistViewModel = remember { WatchlistViewModel(modelRepository, hardwareRepository) }
@@ -119,7 +148,7 @@ fun InferraNavHost(
                         viewModel = discoveryViewModel,
                         onNavigateToModel = { modelId -> navController.navigate(Screen.ModelDetail.createRoute(modelId)) },
                         onNavigateToSearch = { query -> navController.navigate(Screen.Search.createRoute(query)) },
-                        onNavigateToHardware = { navController.navigate(Screen.Hardware.route) }
+                        onNavigateToHardware = { navController.navigate(Screen.Hardware.route) },
                     )
                 }
 
@@ -153,20 +182,14 @@ fun InferraNavHost(
                     val detailViewModel = remember(modelId) {
                         ModelDetailViewModel(
                             modelId = modelId,
-                            modelRepository = modelRepository,
-                            hardwareRepository = hardwareRepository,
-                            downloadRepository = downloadRepository,
-                            companionRepository = companionRepository,
-                            providerRepository = providerRepository,
-                            quantDiscoveryRepository = quantDiscoveryRepository,
-                            modelDownloader = modelDownloader
+                            modelRepository = modelRepository
                         )
                     }
 
                     ModelDetailScreen(
                         viewModel = detailViewModel,
-                        onBack = { navController.popBackStack() },
-                        onNavigateToModel = { newModelId -> navController.navigate(Screen.ModelDetail.createRoute(newModelId)) }
+                        onBackClick = { navController.popBackStack() },
+                        onLaunchUrl = launchUrl
                     )
                 }
 

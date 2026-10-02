@@ -52,7 +52,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DownloadsScreen(
-    viewModel: DownloadsViewModel
+    viewModel: DownloadsViewModel,
 ) {
     val state by viewModel.uiState.collectAsState()
     var showPairDialog by remember { mutableStateOf(false) }

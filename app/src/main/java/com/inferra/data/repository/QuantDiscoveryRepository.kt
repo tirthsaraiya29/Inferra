@@ -261,7 +261,7 @@ class QuantDiscoveryRepository(
             } else {
                 // If existing quant has size 0 but new one has real size, replace it
                 val existing = map[key]!!
-                if (existing.fileSizeBytes == 0L && q.fileSizeBytes > 0L) {
+                if ((existing.fileSizeBytes == 0L) && (q.fileSizeBytes > 0L)) {
                     map[key] = q
                 }
             }

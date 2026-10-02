@@ -9,5 +9,5 @@ data class DeviceTarget(
     val isOnline: Boolean,
     val lastSeenEpochMs: Long,
     val isPaired: Boolean,
-    val supportedRuntimes: List<String>
+    val supportedRuntimes: List<String>,
 )

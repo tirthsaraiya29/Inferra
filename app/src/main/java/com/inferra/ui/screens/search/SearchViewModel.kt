@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 data class SearchUiState(
     val query: String = "",
@@ -29,7 +30,7 @@ data class SearchUiState(
     val isGgufOnly: Boolean = false,
     val activeHardwareProfile: HardwareProfile? = null,
     val compatibilityMap: Map<String, HardwareCompatibilityResult> = emptyMap(),
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
 )
 
 class SearchViewModel(
@@ -73,7 +74,7 @@ class SearchViewModel(
     private fun triggerSearchDebounced() {
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
-            delay(250) // 250ms debounce
+            delay(250.milliseconds) // 250ms debounce
             performSearch()
         }
     }
@@ -100,9 +101,9 @@ class SearchViewModel(
 
                 val profile = state.activeHardwareProfile ?: hardwareRepository.getActiveProfile()
                 val compMap = if (profile != null) {
-                    combined.associateBy({ it.id }, { model ->
+                    combined.associateBy(keySelector = { it.id }) { model ->
                         HardwareFitCalculator.calculate(model, model.quantizations.firstOrNull(), profile)
-                    })
+                    }
                 } else {
                     emptyMap()
                 }
@@ -145,8 +146,8 @@ class SearchViewModel(
 
                 val profile = state.activeHardwareProfile ?: hardwareRepository.getActiveProfile()
                 val compMap = if (profile != null) {
-                    results.associate { model ->
-                        model.id to HardwareFitCalculator.calculate(model, model.quantizations.firstOrNull(), profile)
+                    results.associateBy(keySelector = { it.id }) { model ->
+                        HardwareFitCalculator.calculate(model, model.quantizations.firstOrNull(), profile)
                     }
                 } else {
                     emptyMap()

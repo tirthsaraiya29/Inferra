@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
 class ProviderRepository(
-    private val providerDao: ProviderDao
+    private val providerDao: ProviderDao,
 ) {
 
     val allProvidersFlow: Flow<List<Provider>> = providerDao.getAllProviders().map { list ->
@@ -23,11 +23,11 @@ class ProviderRepository(
 
     suspend fun seedDefaultProviders() = withContext(Dispatchers.IO) {
         val providers = listOf(
-            ProviderEntity("provider:groq", "Groq", "https://groq.com/favicon.ico", "https://groq.com", false),
-            ProviderEntity("provider:together", "Together AI", "https://together.ai/favicon.ico", "https://together.ai", false),
-            ProviderEntity("provider:fireworks", "Fireworks AI", "https://fireworks.ai/favicon.ico", "https://fireworks.ai", false),
-            ProviderEntity("provider:deepinfra", "DeepInfra", "https://deepinfra.com/favicon.ico", "https://deepinfra.com", false),
-            ProviderEntity("provider:openrouter", "OpenRouter", "https://openrouter.ai/favicon.ico", "https://openrouter.ai", false)
+            ProviderEntity("provider:groq", "Groq", "https://groq.com/favicon.ico", "https://groq.com", isSelfHosted = false),
+            ProviderEntity("provider:together", "Together AI", "https://together.ai/favicon.ico", "https://together.ai", isSelfHosted = false),
+            ProviderEntity("provider:fireworks", "Fireworks AI", "https://fireworks.ai/favicon.ico", "https://fireworks.ai", isSelfHosted = false),
+            ProviderEntity("provider:deepinfra", "DeepInfra", "https://deepinfra.com/favicon.ico", "https://deepinfra.com", isSelfHosted = false),
+            ProviderEntity("provider:openrouter", "OpenRouter", "https://openrouter.ai/favicon.ico", "https://openrouter.ai", isSelfHosted = false),
         )
         providerDao.insertProviders(providers)
 

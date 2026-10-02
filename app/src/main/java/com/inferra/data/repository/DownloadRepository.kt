@@ -12,11 +12,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 class DownloadRepository(
-    private val downloadJobDao: DownloadJobDao
+    private val downloadJobDao: DownloadJobDao,
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -27,7 +26,7 @@ class DownloadRepository(
     suspend fun createSendToPcJob(
         model: AiModel,
         quantization: QuantizationInfo,
-        targetDevice: DeviceTarget
+        targetDevice: DeviceTarget,
     ): DownloadJob = withContext(Dispatchers.IO) {
         val jobId = "job-${System.currentTimeMillis()}"
         val manifest = DownloadManifest(

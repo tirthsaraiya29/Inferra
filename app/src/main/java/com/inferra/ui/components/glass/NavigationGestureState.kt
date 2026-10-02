@@ -12,9 +12,10 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import kotlin.math.abs
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 enum class NavigationGesturePhase {
     IDLE,
@@ -44,12 +45,12 @@ class NavigationGestureState(
     val mutatorMutex = MutatorMutex()
 
     fun updateSelectedIndex(index: Int, scope: CoroutineScope, itemWidthPx: Float) {
-        if (selectedIndex != index && phase == NavigationGesturePhase.IDLE) {
+        if ((selectedIndex != index) && (phase == NavigationGesturePhase.IDLE)) {
             selectedIndex = index
             candidateIndex = index
             scope.launch {
                 mutatorMutex.mutate {
-                    capsuleCenterX.snapTo(index * itemWidthPx + itemWidthPx * 0.5f)
+                    capsuleCenterX.snapTo((index * itemWidthPx) + (itemWidthPx * 0.5f))
                     capsuleStretchRatio.snapTo(1.0f)
                     capsuleSquishY.snapTo(1.0f)
                 }
@@ -67,7 +68,7 @@ class NavigationGestureState(
                 capsuleCenterX.snapTo(initialX)
                 capsuleSquishY.animateTo(
                     0.88f,
-                    spring(stiffness = Spring.StiffnessHigh)
+                    spring(stiffness = Spring.StiffnessHigh),
                 )
             }
         }
@@ -120,31 +121,33 @@ class NavigationGestureState(
                     capsuleSquishY.snapTo(1.0f)
                 } else {
                     // Viscous liquid spring settling animation
-                    launch {
-                        capsuleStretchRatio.animateTo(
-                            1.0f,
+                    coroutineScope {
+                        launch {
+                            capsuleStretchRatio.animateTo(
+                                1.0f,
+                                spring(
+                                    stiffness = Spring.StiffnessMedium,
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                )
+                            )
+                        }
+                        launch {
+                            capsuleSquishY.animateTo(
+                                1.0f,
+                                spring(
+                                    stiffness = Spring.StiffnessMedium,
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                )
+                            )
+                        }
+                        capsuleCenterX.animateTo(
+                            targetCenterX,
                             spring(
-                                stiffness = Spring.StiffnessMedium,
+                                stiffness = Spring.StiffnessLow,
                                 dampingRatio = Spring.DampingRatioMediumBouncy
                             )
                         )
                     }
-                    launch {
-                        capsuleSquishY.animateTo(
-                            1.0f,
-                            spring(
-                                stiffness = Spring.StiffnessMedium,
-                                dampingRatio = Spring.DampingRatioMediumBouncy
-                            )
-                        )
-                    }
-                    capsuleCenterX.animateTo(
-                        targetCenterX,
-                        spring(
-                            stiffness = Spring.StiffnessLow,
-                            dampingRatio = Spring.DampingRatioMediumBouncy
-                        )
-                    )
                 }
 
                 selectedIndex = targetIdx
@@ -161,9 +164,11 @@ class NavigationGestureState(
 
         scope.launch {
             mutatorMutex.mutate {
-                launch { capsuleStretchRatio.animateTo(1.0f, spring(stiffness = Spring.StiffnessMedium)) }
-                launch { capsuleSquishY.animateTo(1.0f, spring(stiffness = Spring.StiffnessMedium)) }
-                capsuleCenterX.animateTo(originalCenterX, spring(stiffness = Spring.StiffnessLow))
+                coroutineScope {
+                    launch { capsuleStretchRatio.animateTo(1.0f, spring(stiffness = Spring.StiffnessMedium)) }
+                    launch { capsuleSquishY.animateTo(1.0f, spring(stiffness = Spring.StiffnessMedium)) }
+                    capsuleCenterX.animateTo(originalCenterX, spring(stiffness = Spring.StiffnessLow))
+                }
                 phase = NavigationGesturePhase.IDLE
             }
         }

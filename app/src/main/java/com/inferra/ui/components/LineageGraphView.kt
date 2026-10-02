@@ -79,8 +79,7 @@ fun LineageGraphView(
                 name = baseName,
                 badgeText = "Base",
                 accentColor = TextMuted,
-                onClick = { onNavigateToModel(baseName) }
-            )
+            ) { onNavigateToModel(baseName) }
 
             Icon(
                 imageVector = Icons.Default.ArrowDownward,

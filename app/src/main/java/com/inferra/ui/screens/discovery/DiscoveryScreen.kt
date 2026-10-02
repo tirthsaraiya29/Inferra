@@ -1,46 +1,50 @@
 package com.inferra.ui.screens.discovery
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.inferra.domain.model.AiModel
-import com.inferra.domain.model.HardwareCompatibilityResult
-import com.inferra.ui.components.GlassButton
-import com.inferra.ui.components.GlassCard
-import com.inferra.ui.components.GlassChip
-import com.inferra.ui.components.GlassTextField
-import com.inferra.ui.components.LiquidGlassBackground
-import com.inferra.ui.components.ModelCard
-import com.inferra.ui.theme.AccentAzure
-import com.inferra.ui.theme.TextMuted
-import com.inferra.ui.theme.TextPrimary
-import com.inferra.ui.theme.TextSecondary
+import com.inferra.domain.model.EmptyReason
+import com.inferra.domain.model.UiState
+import com.inferra.ui.components.ExecutiveEmptyState
+import com.inferra.ui.components.ExecutiveModelCard
 
 @Composable
 fun DiscoveryScreen(
@@ -49,170 +53,167 @@ fun DiscoveryScreen(
     onNavigateToSearch: (String) -> Unit,
     onNavigateToHardware: () -> Unit = {}
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val catalogState by viewModel.catalogUiState.collectAsState()
+    val filterState by viewModel.filterState.collectAsState()
 
-    LiquidGlassBackground {
-        if (state.isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator(color = AccentAzure, strokeWidth = 2.dp)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Discovering AI models...",
-                        color = TextSecondary,
-                        fontSize = 14.sp
-                    )
-                }
-            }
-        } else if (state.errorMessage != null && state.spotlightModel == null) {
-            Box(
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // Header Section
+            Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(32.dp),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 16.dp)
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "Unable to load models from Hugging Face",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = state.errorMessage ?: "Please check your network connection and try again.",
-                        fontSize = 13.sp,
-                        color = TextMuted,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(20.dp))
-                    GlassButton(onClick = { viewModel.refresh() }) {
-                        Text(text = "Retry", fontSize = 14.sp)
+                Text(
+                    text = "Model Intelligence",
+                    style = MaterialTheme.typography.displayLarge.copy(
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Text(
+                    text = "Executive Model Discovery & Evaluation Explorer",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // FTS Search Field
+                OutlinedTextField(
+                    value = filterState.searchQuery,
+                    onValueChange = { viewModel.onSearchQueryChanged(it) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    placeholder = {
+                        Text(
+                            text = "Search models, organizations, or families...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    },
+                    trailingIcon = {
+                        if (filterState.searchQuery.isNotBlank()) {
+                            IconButton(onClick = { viewModel.onSearchQueryChanged("") }) {
+                                Icon(
+                                    imageVector = Icons.Default.Clear,
+                                    contentDescription = "Clear",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    singleLine = true
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Parameter Quick Filter Pills
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    item {
+                        FilterPill(
+                            text = "All Models",
+                            isSelected = (filterState.minParamsBillion == null) && (filterState.maxParamsBillion == null) && (filterState.isOpenWeightsOnly == null),
+                        ) { viewModel.resetFilters() }
+                    }
+                    item {
+                        FilterPill(
+                            text = "Open Weights",
+                            isSelected = filterState.isOpenWeightsOnly == true,
+                            onClick = { viewModel.onOpenWeightsToggled(if (filterState.isOpenWeightsOnly == true) null else true) }
+                        )
+                    }
+                    item {
+                        FilterPill(
+                            text = "Frontier (>50B)",
+                            isSelected = filterState.minParamsBillion == 50,
+                            onClick = { viewModel.onParamsRangeChanged(if (filterState.minParamsBillion == 50) null else 50, null) }
+                        )
+                    }
+                    item {
+                        FilterPill(
+                            text = "Compact (<=32B)",
+                            isSelected = filterState.maxParamsBillion == 32,
+                            onClick = { viewModel.onParamsRangeChanged(null, if (filterState.maxParamsBillion == 32) null else 32) }
+                        )
+                    }
+                    item {
+                        FilterPill(
+                            text = "Long Context (>=128K)",
+                            isSelected = filterState.minContextLength == 128000,
+                            onClick = { viewModel.onMinContextChanged(if (filterState.minContextLength == 128000) null else 128000) }
+                        )
                     }
                 }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(top = 24.dp, bottom = 110.dp)
-            ) {
-                // Editorial Header
-                item {
-                    Column(
+
+            // Catalog Content Body
+            when (val state = catalogState) {
+                is UiState.Loading -> {
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp)
+                            .fillMaxSize()
+                            .padding(top = 48.dp),
+                        contentAlignment = Alignment.TopCenter
                     ) {
-                        Text(
-                            text = "Discover models",
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
+                        CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.primary,
+                            strokeWidth = 2.dp
                         )
+                    }
+                }
 
-                        Spacer(modifier = Modifier.height(4.dp))
+                is UiState.Empty -> {
+                    ExecutiveEmptyState(
+                        reason = state.reason,
+                        onAction = { viewModel.resetFilters() }
+                    )
+                }
 
-                        Text(
-                            text = "Explore open-weight artificial intelligence",
-                            fontSize = 14.sp,
-                            color = TextSecondary
-                        )
+                is UiState.Error -> {
+                    ExecutiveEmptyState(
+                        reason = EmptyReason.CORRUPTED_CACHE,
+                        onAction = { viewModel.resetFilters() }
+                    )
+                }
 
-                        Spacer(modifier = Modifier.height(20.dp))
+                is UiState.Success -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 110.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        items(state.data, key = { it.id }) { model ->
+                            val topScores by viewModel.getTopScoresForModel(model.id).collectAsState()
 
-                        // Search Trigger
-                        Box(modifier = Modifier.clickable { onNavigateToSearch("") }) {
-                            GlassTextField(
-                                value = "",
-                                onValueChange = { query -> onNavigateToSearch(query) },
-                                placeholderText = "Search models or capabilities...",
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Default.Search,
-                                        contentDescription = "Search",
-                                        tint = TextMuted
-                                    )
-                                }
+                            ExecutiveModelCard(
+                                model = model,
+                                topScores = topScores,
+                                onClick = { onNavigateToModel(model.id) }
                             )
                         }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Category quick tags
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            item { GlassChip(text = "Coding", isSelected = false, onClick = { onNavigateToSearch("coding") }) }
-                            item { GlassChip(text = "Reasoning", isSelected = false, onClick = { onNavigateToSearch("reasoning") }) }
-                            item { GlassChip(text = "Vision", isSelected = false, onClick = { onNavigateToSearch("vision") }) }
-                            item { GlassChip(text = "Small models", isSelected = false, onClick = { onNavigateToSearch("small") }) }
-                            item { GlassChip(text = "MoE", isSelected = false, onClick = { onNavigateToSearch("MoE") }) }
-                            item { GlassChip(text = "Long context", isSelected = false, onClick = { onNavigateToSearch("context") }) }
-                        }
-                    }
-                }
-
-                // Featured Model
-                state.spotlightModel?.let { spotlight ->
-                    item {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 24.dp)
-                        ) {
-                            Text(
-                                text = "Featured",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = TextPrimary
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            ModelCard(
-                                model = spotlight,
-                                compatibility = state.compatibilityMap[spotlight.id],
-                                onClick = { onNavigateToModel(spotlight.id) }
-                            )
-                        }
-                    }
-                }
-
-                // Trending Models
-                if (state.trendingModels.isNotEmpty()) {
-                    item {
-                        EditorialModelSection(
-                            title = "Trending models",
-                            models = state.trendingModels,
-                            compatibilityMap = state.compatibilityMap,
-                            onModelClick = onNavigateToModel
-                        )
-                    }
-                }
-
-                // Fresh Models
-                if (state.newModels.isNotEmpty()) {
-                    item {
-                        EditorialModelSection(
-                            title = "Recently released",
-                            models = state.newModels,
-                            compatibilityMap = state.compatibilityMap,
-                            onModelClick = onNavigateToModel
-                        )
-                    }
-                }
-
-                // Popular Models
-                if (state.popularModels.isNotEmpty()) {
-                    item {
-                        EditorialModelSection(
-                            title = "Popular",
-                            models = state.popularModels,
-                            compatibilityMap = state.compatibilityMap,
-                            onModelClick = onNavigateToModel
-                        )
                     }
                 }
             }
@@ -221,40 +222,22 @@ fun DiscoveryScreen(
 }
 
 @Composable
-private fun EditorialModelSection(
-    title: String,
-    models: List<AiModel>,
-    compatibilityMap: Map<String, HardwareCompatibilityResult>,
-    onModelClick: (String) -> Unit
+private fun FilterPill(
+    text: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
 ) {
-    Column(
+    Surface(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 16.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .clickable { onClick() },
+        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
     ) {
         Text(
-            text = title,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = TextPrimary,
-            modifier = Modifier.padding(horizontal = 20.dp)
+            text = text,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium)
         )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 20.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            items(models, key = { it.id }) { model ->
-                Box(modifier = Modifier.width(280.dp)) {
-                    ModelCard(
-                        model = model,
-                        compatibility = compatibilityMap[model.id],
-                        onClick = { onModelClick(model.id) }
-                    )
-                }
-            }
-        }
     }
 }

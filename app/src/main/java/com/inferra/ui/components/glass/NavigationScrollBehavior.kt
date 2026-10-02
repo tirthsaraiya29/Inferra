@@ -32,7 +32,7 @@ class NavigationScrollState(
     fun onScroll(consumedDy: Float, scope: CoroutineScope) {
         if (isGestureActive) return // Suspend scroll minimization while direct manipulation gesture is active
 
-        if ((consumedDy > 0 && accumulatedDelta < 0) || (consumedDy < 0 && accumulatedDelta > 0)) {
+        if (((consumedDy > 0) && (accumulatedDelta < 0)) || ((consumedDy < 0) && (accumulatedDelta > 0))) {
             accumulatedDelta = 0.0f
         }
         accumulatedDelta += consumedDy
@@ -44,7 +44,7 @@ class NavigationScrollState(
                     targetValue = 1.0f,
                     animationSpec = spring(
                         stiffness = Spring.StiffnessMediumLow,
-                        dampingRatio = Spring.DampingRatioNoBouncy
+                        dampingRatio = Spring.DampingRatioNoBouncy,
                     )
                 )
             }
@@ -56,7 +56,7 @@ class NavigationScrollState(
                     targetValue = 0.0f,
                     animationSpec = spring(
                         stiffness = Spring.StiffnessMediumLow,
-                        dampingRatio = Spring.DampingRatioNoBouncy
+                        dampingRatio = Spring.DampingRatioNoBouncy,
                     )
                 )
             }

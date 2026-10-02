@@ -1,37 +1,134 @@
 package com.inferra.data.repository
 
 import android.util.Log
+import com.inferra.data.local.AndroidBenchmarkEntity
+import com.inferra.data.local.AndroidModelDao
+import com.inferra.data.local.AndroidModelEntity
+import com.inferra.data.local.AndroidModelWideEntity
 import com.inferra.data.local.ModelDao
 import com.inferra.data.local.ModelEntity
+import com.inferra.data.local.ModelWithDetails
 import com.inferra.data.local.WatchlistDao
 import com.inferra.data.local.WatchlistEntity
 import com.inferra.data.network.HuggingFaceApi
 import com.inferra.data.network.NetworkToDomainMapper
 import com.inferra.domain.model.AiModel
+import com.inferra.domain.model.BenchmarkScoreUiModel
 import com.inferra.domain.model.CapabilityMatrix
 import com.inferra.domain.model.CanonicalModel
+import com.inferra.domain.model.EmptyReason
 import com.inferra.domain.model.LicenseType
 import com.inferra.domain.model.LineageInfo
 import com.inferra.domain.model.Modality
 import com.inferra.domain.model.ModelTask
+import com.inferra.domain.model.UiState
 import com.inferra.domain.usecase.CanonicalModelResolver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 class ModelRepository(
     private val api: HuggingFaceApi?,
     private val modelDao: ModelDao,
+    private val androidModelDao: AndroidModelDao,
     private val watchlistDao: WatchlistDao,
-    private val settingsRepository: SettingsRepository? = null
+    private val settingsRepository: SettingsRepository? = null,
 ) {
     private companion object {
-        const val TAG = "HuggingFaceApi"
+        const val TAG = "ModelRepository"
         private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+    }
+
+    fun observeAndroidModels(
+        query: String? = null,
+        minParams: Int? = null,
+        maxParams: Int? = null,
+        minContext: Int? = null,
+        isOpenWeights: Boolean? = null,
+        license: String? = null,
+        sortBy: String = "updated_at",
+    ): Flow<UiState<List<AndroidModelEntity>>> {
+        val openWeightsInt = isOpenWeights?.let { if (it) 1 else 0 }
+        return androidModelDao.searchAndFilterModels(
+            query = query?.ifBlank { null },
+            minParams = minParams,
+            maxParams = maxParams,
+            minContext = minContext,
+            isOpenWeights = openWeightsInt,
+            license = license?.ifBlank { null },
+            sortBy = sortBy
+        ).map { models ->
+            if (models.isEmpty()) {
+                UiState.Empty(EmptyReason.NO_RESULTS)
+            } else {
+                UiState.Success(models)
+            }
+        }.catch { e ->
+            Log.e(TAG, "Error querying android models: ${e.message}", e)
+            emit(UiState.Error(e, "Failed to load model catalog. Please try refreshing."))
+        }.flowOn(Dispatchers.IO)
+    }
+
+    fun observeAndroidModelDetails(modelId: String): Flow<UiState<ModelWithDetails>> {
+        return androidModelDao.getModelWithDetails(modelId).map { details ->
+            if (details == null) {
+                UiState.Empty(EmptyReason.NO_RESULTS)
+            } else {
+                UiState.Success(details)
+            }
+        }.catch { e ->
+            Log.e(TAG, "Error querying details for $modelId: ${e.message}", e)
+            emit(UiState.Error(e, "Failed to load model details."))
+        }.flowOn(Dispatchers.IO)
+    }
+
+    fun observeBenchmarkScores(modelId: String): Flow<List<BenchmarkScoreUiModel>> {
+        return androidModelDao.getBenchmarkScoresForModel(modelId).map { queryResults ->
+            queryResults.map { (benchmarkId, name, domain, metricName, score, scoreNormalized, measurementType) ->
+                BenchmarkScoreUiModel(
+                    benchmarkId = benchmarkId,
+                    name = name,
+                    domain = domain,
+                    metricName = metricName,
+                    rawScore = score,
+                    normalizedScore = scoreNormalized,
+                    measurementType = measurementType ?: "UNMEASURED",
+                )
+            }
+        }.catch { e ->
+            Log.e(TAG, "Error loading benchmark scores for $modelId: ${e.message}", e)
+            emit(emptyList())
+        }.flowOn(Dispatchers.IO)
+    }
+
+    fun observeWideModels(modelIds: List<String>): Flow<UiState<List<AndroidModelWideEntity>>> {
+        return flow {
+            emit(UiState.Loading)
+            if (modelIds.isEmpty()) {
+                androidModelDao.getAllModelsWide().collect { list ->
+                    if (list.isEmpty()) emit(UiState.Empty(EmptyReason.NO_COMPARISON_MODELS))
+                    else emit(UiState.Success(list))
+                }
+            } else {
+                androidModelDao.getWideModelsByIds(modelIds).collect { list ->
+                    if (list.isEmpty()) emit(UiState.Empty(EmptyReason.NO_COMPARISON_MODELS))
+                    else emit(UiState.Success(list))
+                }
+            }
+        }.catch { e ->
+            Log.e(TAG, "Error loading comparison matrix: ${e.message}", e)
+            emit(UiState.Error(e, "Failed to build model comparison matrix."))
+        }.flowOn(Dispatchers.IO)
+    }
+
+    fun observeAllBenchmarks(): Flow<List<AndroidBenchmarkEntity>> {
+        return androidModelDao.getAllBenchmarks().flowOn(Dispatchers.IO)
     }
 
     private suspend fun getAuthHeader(): String? {
@@ -41,14 +138,16 @@ class ModelRepository(
         } else null
     }
 
-    suspend fun getCanonicalModel(id: String): CanonicalModel {
+    fun getCanonicalModel(id: String): CanonicalModel {
         val canonicalId = CanonicalModelResolver.resolveCanonicalId(id)
         return CanonicalModelResolver.getCanonicalModel(canonicalId, fallbackDisplayName = id)
     }
 
     suspend fun getModels(forceRefresh: Boolean = false, limit: Int = 40, page: Int = 0): List<AiModel> = withContext(Dispatchers.IO) {
         if (api == null) {
-            throw IllegalStateException("Hugging Face API client not configured")
+            val cached = modelDao.getAllModels().first()
+            if (cached.isNotEmpty()) return@withContext cached.map { parseEntity(it) }
+            return@withContext emptyList()
         }
 
         if (!forceRefresh) {
@@ -59,31 +158,37 @@ class ModelRepository(
             }
         }
 
-        Log.d(TAG, "Dispatching live getModels(limit=$limit, page=$page) to Hugging Face API...")
-        val dtos = api.getModels(token = getAuthHeader(), limit = limit, page = page, sort = "downloads")
-        Log.d(TAG, "Received ${dtos.size} model DTOs from Hugging Face API")
-        val domainModels = dtos.map { NetworkToDomainMapper.mapToDomain(it) }
-        if (domainModels.isNotEmpty()) {
-            saveToLocalDb(domainModels)
+        try {
+            Log.d(TAG, "Dispatching live getModels(limit=$limit, page=$page) to Hugging Face API...")
+            val dtos = api.getModels(token = getAuthHeader(), limit = limit, page = page, sort = "downloads")
+            val domainModels = dtos.map { NetworkToDomainMapper.mapToDomain(it) }
+            if (domainModels.isNotEmpty()) {
+                saveToLocalDb(domainModels)
+            }
+            domainModels
+        } catch (e: Exception) {
+            Log.e(TAG, "Live getModels failed: ${e.message}", e)
+            val cached = modelDao.getAllModels().first()
+            cached.map { parseEntity(it) }
         }
-        domainModels
     }
 
     suspend fun getModelById(id: String): AiModel? = withContext(Dispatchers.IO) {
         val cached = modelDao.getModelById(id)
-        if (cached != null) {
-            return@withContext parseEntity(cached)
-        }
+        if (cached != null) return@withContext parseEntity(cached)
 
-        if (api == null) {
-            throw IllegalStateException("Hugging Face API client not configured")
-        }
+        if (api == null) return@withContext null
 
-        Log.d(TAG, "Fetching live detail for model '$id' from Hugging Face...")
-        val dto = api.getModelDetail(token = getAuthHeader(), id = id)
-        val domainModel = NetworkToDomainMapper.mapToDomain(dto)
-        saveToLocalDb(listOf(domainModel))
-        domainModel
+        try {
+            Log.d(TAG, "Fetching live detail for model '$id' from Hugging Face...")
+            val dto = api.getModelDetail(token = getAuthHeader(), id = id)
+            val domainModel = NetworkToDomainMapper.mapToDomain(dto)
+            saveToLocalDb(listOf(domainModel))
+            domainModel
+        } catch (e: Exception) {
+            Log.e(TAG, "Live getModelById failed: ${e.message}", e)
+            null
+        }
     }
 
     suspend fun searchModels(
@@ -96,31 +201,34 @@ class ModelRepository(
         limit: Int = 30
     ): List<AiModel> = withContext(Dispatchers.IO) {
         if (api == null) {
-            throw IllegalStateException("Hugging Face API client not configured")
+            val cached = modelDao.getAllModels().first()
+            return@withContext cached.map { parseEntity(it) }
         }
 
         val pipelineTag = mapTaskToPipelineTag(selectedTask)
-        Log.d(TAG, "Dispatching live search query '$query' (pipelineTag=$pipelineTag, page=$page) to Hugging Face API...")
+        try {
+            val dtos = api.getModels(
+                token = getAuthHeader(),
+                search = query.ifBlank { null },
+                pipelineTag = pipelineTag,
+                limit = limit,
+                page = page,
+                sort = "downloads"
+            )
+            val domainModels = dtos.map { NetworkToDomainMapper.mapToDomain(it) }
+            if (domainModels.isNotEmpty()) {
+                saveToLocalDb(domainModels)
+            }
 
-        val dtos = api.getModels(
-            token = getAuthHeader(),
-            search = query.ifBlank { null },
-            pipelineTag = pipelineTag,
-            limit = limit,
-            page = page,
-            sort = "downloads"
-        )
-        Log.d(TAG, "Live search returned ${dtos.size} DTOs from Hugging Face")
-        val domainModels = dtos.map { NetworkToDomainMapper.mapToDomain(it) }
-        if (domainModels.isNotEmpty()) {
-            saveToLocalDb(domainModels)
-        }
-
-        domainModels.filter { model ->
-            val matchesMaxParams = maxParams == null || model.totalParamsBillion <= 0f || model.totalParamsBillion <= maxParams
-            val matchesMinParams = minParams == null || model.totalParamsBillion <= 0f || model.totalParamsBillion >= minParams
-            val matchesGguf = !isGgufOnly || model.quantizations.any { it.format.equals("GGUF", true) }
-            matchesMaxParams && matchesMinParams && matchesGguf
+            domainModels.filter { model ->
+                val matchesMaxParams = (maxParams == null) || (model.totalParamsBillion <= 0f) || (model.totalParamsBillion <= maxParams)
+                val matchesMinParams = (minParams == null) || (model.totalParamsBillion <= 0f) || (model.totalParamsBillion >= minParams)
+                val matchesGguf = !isGgufOnly || model.quantizations.any { it.format.equals("GGUF", ignoreCase = true) }
+                matchesMaxParams && matchesMinParams && matchesGguf
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Live searchModels failed: ${e.message}", e)
+            emptyList()
         }
     }
 

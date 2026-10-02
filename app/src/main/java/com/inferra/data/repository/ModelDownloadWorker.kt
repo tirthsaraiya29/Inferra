@@ -3,7 +3,6 @@
 package com.inferra.data.repository
 
 import android.Manifest
-import android.R
 import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -25,14 +24,13 @@ import com.inferra.data.local.LocalModelEntity
 import com.inferra.domain.model.DownloadJob
 import com.inferra.domain.model.DownloadManifest
 import com.inferra.domain.model.DownloadStatus
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.security.MessageDigest
 
 class ModelDownloadWorker(
     private val appContext: Context,
-    workerParams: WorkerParameters
+    workerParams: WorkerParameters,
 ) : CoroutineWorker(appContext, workerParams) {
 
     companion object {
@@ -88,7 +86,7 @@ class ModelDownloadWorker(
             sourceUrl = url,
             targetDeviceId = "local-device",
             requestedFormat = format,
-            createdAtEpochMs = System.currentTimeMillis()
+            createdAtEpochMs = System.currentTimeMillis(),
         )
 
         // Initial job update in Room
@@ -127,11 +125,11 @@ class ModelDownloadWorker(
         downloader.startDownload(job)
 
         val finalProgress = downloader.downloadProgressFlow.value[jobId]
-        if (finalProgress != null && finalProgress.status == DownloadStatus.COMPLETED && targetFile.exists()) {
+        if ((finalProgress != null) && (finalProgress.status == DownloadStatus.COMPLETED) && targetFile.exists()) {
             val computedSha256 = try { calculateFileSha256(targetFile) } catch (_: Exception) { null }
             val expectedSha256 = manifest.checksumSha256
 
-            if (expectedSha256 != null && computedSha256 != null && !computedSha256.equals(expectedSha256, ignoreCase = true)) {
+            if ((expectedSha256 != null) && (computedSha256 != null) && !computedSha256.equals(expectedSha256, ignoreCase = true)) {
                 targetFile.delete()
                 db.downloadJobDao().insertJob(
                     DownloadJobEntity(
@@ -245,26 +243,22 @@ class ModelDownloadWorker(
     private fun createForegroundInfo(title: String): ForegroundInfo {
         val notification = NotificationCompat.Builder(appContext, CHANNEL_ID)
             .setContentTitle(title)
-            .setSmallIcon(R.drawable.stat_sys_download)
+            .setSmallIcon(android.R.drawable.stat_sys_download)
             .setProgress(100, 0, true)
             .setOngoing(true)
             .build()
 
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            ForegroundInfo(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
-        } else {
-            ForegroundInfo(NOTIFICATION_ID, notification)
-        }
+        return ForegroundInfo(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
     }
 
     @SuppressLint("MissingPermission")
     @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
     private fun updateNotification(title: String) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(
+        if ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) &&
+            (ContextCompat.checkSelfPermission(
                 appContext,
                 Manifest.permission.POST_NOTIFICATIONS
-            ) != PackageManager.PERMISSION_GRANTED
+            ) != PackageManager.PERMISSION_GRANTED)
         ) {
             return
         }
@@ -272,7 +266,7 @@ class ModelDownloadWorker(
         try {
             val notification = NotificationCompat.Builder(appContext, CHANNEL_ID)
                 .setContentTitle(title)
-                .setSmallIcon(R.drawable.stat_sys_download_done)
+                .setSmallIcon(android.R.drawable.stat_sys_download_done)
                 .setProgress(100, 100, false)
                 .setOngoing(false)
                 .build()

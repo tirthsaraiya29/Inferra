@@ -10,7 +10,7 @@ data class Provider(
     val name: String,                       // e.g. "Groq", "Together AI", "Fireworks AI"
     val logoUrl: String = "",
     val websiteUrl: String = "",
-    val isSelfHosted: Boolean = false
+    val isSelfHosted: Boolean = false,
 )
 
 @Immutable

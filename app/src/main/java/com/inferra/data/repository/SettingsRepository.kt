@@ -19,7 +19,7 @@ data class UserSettings(
     val isTelemetryEnabled: Boolean = false,
     val autoRefreshData: Boolean = true,
     val modelStoragePath: String = "",
-    val hfToken: String = ""
+    val hfToken: String = "",
 )
 
 class SettingsRepository(private val context: Context) {

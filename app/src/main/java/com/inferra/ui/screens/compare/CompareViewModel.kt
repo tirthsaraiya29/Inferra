@@ -2,74 +2,50 @@ package com.inferra.ui.screens.compare
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.inferra.data.repository.HardwareRepository
+import com.inferra.data.local.AndroidModelWideEntity
 import com.inferra.data.repository.ModelRepository
-import com.inferra.domain.model.AiModel
-import com.inferra.domain.model.HardwareCompatibilityResult
-import com.inferra.domain.model.HardwareProfile
-import com.inferra.domain.usecase.HardwareFitCalculator
+import com.inferra.domain.model.UiState
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.stateIn
 
-data class CompareUiState(
-    val isLoading: Boolean = true,
-    val availableModels: List<AiModel> = emptyList(),
-    val selectedModels: List<AiModel> = emptyList(),
-    val activeHardwareProfile: HardwareProfile? = null,
-    val compatibilityMap: Map<String, HardwareCompatibilityResult> = emptyMap()
+data class CompareViewState(
+    val selectedModelIds: List<String> = emptyList()
 )
 
 class CompareViewModel(
-    private val modelRepository: ModelRepository,
-    private val hardwareRepository: HardwareRepository
+    private val modelRepository: ModelRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(CompareUiState())
-    val uiState: StateFlow<CompareUiState> = _uiState.asStateFlow()
+    private val _selectedIds = MutableStateFlow<List<String>>(emptyList())
+    val selectedIds: StateFlow<List<String>> = _selectedIds.asStateFlow()
 
-    init {
-        loadCompareData()
-    }
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val matrixState: StateFlow<UiState<List<AndroidModelWideEntity>>> = _selectedIds
+        .flatMapLatest { ids ->
+            modelRepository.observeWideModels(ids)
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = UiState.Loading
+        )
 
-    fun selectModel(model: AiModel) {
-        val current = _uiState.value.selectedModels.toMutableList()
-        if (current.any { it.id == model.id }) {
-            current.removeAll { it.id == model.id }
+    fun toggleModelSelection(modelId: String) {
+        val current = _selectedIds.value.toMutableList()
+        if (current.contains(modelId)) {
+            current.remove(modelId)
         } else if (current.size < 4) {
-            current.add(model)
+            current.add(modelId)
         }
-
-        _uiState.update {
-            it.copy(
-                selectedModels = current
-            )
-        }
+        _selectedIds.value = current
     }
 
-    private fun loadCompareData() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            val profile = hardwareRepository.getActiveProfile()
-            val models = modelRepository.getModels()
-
-            val compMap = models.associate { model ->
-                model.id to HardwareFitCalculator.calculate(model, model.quantizations.firstOrNull(), profile)
-            }
-
-            val defaultSelected = models.take(2)
-
-            _uiState.update {
-                it.copy(
-                    isLoading = false,
-                    availableModels = models,
-                    selectedModels = defaultSelected,
-                    activeHardwareProfile = profile,
-                    compatibilityMap = compMap
-                )
-            }
-        }
+    fun clearSelections() {
+        _selectedIds.value = emptyList()
     }
 }

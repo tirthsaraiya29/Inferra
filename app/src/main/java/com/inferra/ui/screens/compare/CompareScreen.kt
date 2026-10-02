@@ -1,5 +1,7 @@
 package com.inferra.ui.screens.compare
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,14 +15,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.CompareArrows
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -31,99 +34,124 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.inferra.domain.model.FitGrade
-import com.inferra.ui.components.GlassBadge
-import com.inferra.ui.components.GlassCard
-import com.inferra.ui.components.GlassChip
-import com.inferra.ui.components.LiquidGlassBackground
-import com.inferra.ui.theme.AccentAzure
-import com.inferra.ui.theme.FitBorderline
-import com.inferra.ui.theme.FitExcellent
-import com.inferra.ui.theme.FitInsufficient
-import com.inferra.ui.theme.TextMuted
-import com.inferra.ui.theme.TextPrimary
-import com.inferra.ui.theme.TextSecondary
-import java.util.Locale
+import com.inferra.data.local.AndroidModelWideEntity
+import com.inferra.domain.model.EmptyReason
+import com.inferra.domain.model.UiState
+import com.inferra.ui.components.ExecutiveEmptyState
 
 @Composable
 fun CompareScreen(
     viewModel: CompareViewModel,
-    onNavigateToModel: (String) -> Unit
+    onNavigateToModel: (String) -> Unit = {},
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val matrixState by viewModel.matrixState.collectAsState()
 
-    LiquidGlassBackground {
-        if (state.isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = AccentAzure, strokeWidth = 2.dp)
-            }
-        } else {
-            Column(modifier = Modifier.fillMaxSize()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 20.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.CompareArrows, contentDescription = "Compare", tint = AccentAzure)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Compare Models",
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Text(
-                        text = "Select models to analyze parameters, specs, and hardware fit side-by-side",
-                        fontSize = 13.sp,
-                        color = TextSecondary
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Screen Header
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 16.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.CompareArrows,
+                        contentDescription = "Compare",
+                        tint = MaterialTheme.colorScheme.primary
                     )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Model Comparison Matrix",
+                        style = MaterialTheme.typography.displayLarge.copy(
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Text(
+                    text = "Side-by-side benchmark matrix and parameter evaluation",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            when (val state = matrixState) {
+                is UiState.Loading -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(top = 48.dp),
+                        contentAlignment = Alignment.TopCenter
                     ) {
-                        items(state.availableModels, key = { it.id }) { model ->
-                            val isSelected = state.selectedModels.any { it.id == model.id }
-                            GlassChip(
-                                text = model.name,
-                                isSelected = isSelected,
-                                onClick = { viewModel.selectModel(model) },
-                                accentColor = AccentAzure
-                            )
-                        }
+                        CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.primary,
+                            strokeWidth = 2.dp
+                        )
                     }
                 }
 
-                if (state.selectedModels.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Select at least 1 model above to compare.", color = TextMuted, fontSize = 14.sp)
-                    }
-                } else {
+                is UiState.Empty -> {
+                    ExecutiveEmptyState(
+                        reason = EmptyReason.NO_COMPARISON_MODELS,
+                        onAction = null
+                    )
+                }
+
+                is UiState.Error -> {
+                    ExecutiveEmptyState(
+                        reason = EmptyReason.NO_COMPARISON_MODELS,
+                        onAction = null
+                    )
+                }
+
+                is UiState.Success -> {
                     val scrollState = rememberScrollState()
+                    val models = state.data
 
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
                             .horizontalScroll(scrollState),
-                        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 110.dp)
+                        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 110.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
+                        // Header Row (Model Cards)
                         item {
                             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                                state.selectedModels.forEach { model ->
+                                models.forEach { model ->
                                     Box(modifier = Modifier.width(220.dp)) {
-                                        GlassCard(onClick = { onNavigateToModel(model.id) }) {
+                                        Card(
+                                            shape = RoundedCornerShape(12.dp),
+                                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+                                        ) {
                                             Column(modifier = Modifier.padding(16.dp)) {
-                                                Text(text = model.author, fontSize = 12.sp, color = AccentAzure, fontWeight = FontWeight.SemiBold)
+                                                Text(
+                                                    text = model.organization,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.primary
+                                                )
                                                 Spacer(modifier = Modifier.height(4.dp))
-                                                Text(text = model.name, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                                                Spacer(modifier = Modifier.height(8.dp))
-                                                GlassBadge(text = model.licenseName, color = TextMuted)
+                                                Text(
+                                                    text = model.displayName,
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                                Spacer(modifier = Modifier.height(6.dp))
+                                                Text(
+                                                    text = model.license ?: "Standard",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
                                             }
                                         }
                                     }
@@ -131,55 +159,98 @@ fun CompareScreen(
                             }
                         }
 
+                        // Parameters
                         item {
-                            CompareSectionTitle("Parameters & Architecture")
+                            SectionHeader("Parameters & Active Context")
                             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                                state.selectedModels.forEach { model ->
-                                    CompareCell(
-                                        label = "Total Params",
-                                        value = "${String.format(Locale.US, "%.1f", model.totalParamsBillion)}B",
-                                        subValue = if (model.isMoe) "(${String.format(Locale.US, "%.1f", model.activeParamsBillion)}B active)" else "Dense"
+                                models.forEach { model ->
+                                    MatrixCell(
+                                        label = "Parameters",
+                                        value = if (model.parameterCount != null) "${model.parameterCount}B" else "N/A"
+                                    )
+                                }
+                            }
+                        }
+
+                        // Context Window
+                        item {
+                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                models.forEach { model ->
+                                    MatrixCell(
+                                        label = "Context Window",
+                                        value = if (model.contextLength != null) "${model.contextLength / 1000}K" else "N/A"
+                                    )
+                                }
+                            }
+                        }
+
+                        // Reasoning & Science Benchmarks
+                        item {
+                            SectionHeader("Reasoning & Science Benchmarks")
+                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                models.forEach { model ->
+                                    MatrixCell(
+                                        label = "MMLU-Pro",
+                                        value = formatScore(model.mmluPro)
                                     )
                                 }
                             }
                         }
 
                         item {
-                            CompareSectionTitle("Context Window")
                             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                                state.selectedModels.forEach { model ->
-                                    CompareCell(
-                                        label = "Max Context",
-                                        value = "${model.contextLengthTokens / 1024}K tokens",
-                                        accentColor = AccentAzure
+                                models.forEach { model ->
+                                    MatrixCell(
+                                        label = "GPQA Diamond",
+                                        value = formatScore(model.gpqa)
                                     )
                                 }
                             }
                         }
 
                         item {
-                            CompareSectionTitle("Hardware Fit (${state.activeHardwareProfile?.gpuName ?: "GPU"})")
                             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                                state.selectedModels.forEach { model ->
-                                    val comp = state.compatibilityMap[model.id]
-                                    val fitText = when (comp?.fitGrade) {
-                                        FitGrade.EXCELLENT -> "Fits device"
-                                        FitGrade.BORDERLINE -> "${comp.offloadPercentage}% Offload"
-                                        FitGrade.INSUFFICIENT -> "Requires RAM"
-                                        else -> "Unknown"
-                                    }
-                                    val fitColor = when (comp?.fitGrade) {
-                                        FitGrade.EXCELLENT -> FitExcellent
-                                        FitGrade.BORDERLINE -> FitBorderline
-                                        FitGrade.INSUFFICIENT -> FitInsufficient
-                                        else -> TextMuted
-                                    }
+                                models.forEach { model ->
+                                    MatrixCell(
+                                        label = "MATH Level 5",
+                                        value = formatScore(model.mathL5)
+                                    )
+                                }
+                            }
+                        }
 
-                                    CompareCell(
-                                        label = "Est. Memory Fit",
-                                        value = fitText,
-                                        subValue = "Inferra estimate",
-                                        accentColor = fitColor
+                        // Software Engineering
+                        item {
+                            SectionHeader("Software Engineering")
+                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                models.forEach { model ->
+                                    MatrixCell(
+                                        label = "SWE-bench Verified",
+                                        value = formatScore(model.sweBenchVerified)
+                                    )
+                                }
+                            }
+                        }
+
+                        item {
+                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                models.forEach { model ->
+                                    MatrixCell(
+                                        label = "LiveCodeBench",
+                                        value = formatScore(model.livecodebench)
+                                    )
+                                }
+                            }
+                        }
+
+                        // Human Preference
+                        item {
+                            SectionHeader("Human Preference & Leaderboards")
+                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                models.forEach { model ->
+                                    MatrixCell(
+                                        label = "Chatbot Arena Elo",
+                                        value = if (model.arenaElo != null) "%.0f".format(model.arenaElo) else "—"
                                     )
                                 }
                             }
@@ -192,34 +263,44 @@ fun CompareScreen(
 }
 
 @Composable
-private fun CompareSectionTitle(title: String) {
+private fun SectionHeader(title: String) {
     Text(
         text = title,
-        fontSize = 14.sp,
-        fontWeight = FontWeight.SemiBold,
-        color = TextPrimary,
-        modifier = Modifier.padding(top = 18.dp, bottom = 8.dp)
+        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+        color = MaterialTheme.colorScheme.onBackground,
+        modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
     )
 }
 
 @Composable
-private fun CompareCell(
+private fun MatrixCell(
     label: String,
-    value: String,
-    subValue: String? = null,
-    accentColor: Color = TextPrimary
+    value: String
 ) {
     Box(modifier = Modifier.width(220.dp)) {
-        GlassCard(shape = RoundedCornerShape(12.dp)) {
+        Card(
+            shape = RoundedCornerShape(10.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+        ) {
             Column(modifier = Modifier.padding(14.dp)) {
-                Text(text = label, fontSize = 11.sp, color = TextMuted)
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(text = value, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = accentColor)
-                if (subValue != null) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(text = subValue, fontSize = 12.sp, color = TextSecondary)
-                }
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = if (value == "—") MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
+                )
             }
         }
     }
+}
+
+private fun formatScore(score: Double?): String {
+    if (score == null) return "—"
+    return "%.1f".format(score)
 }
