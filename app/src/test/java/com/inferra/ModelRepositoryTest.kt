@@ -54,7 +54,6 @@ class ModelRepositoryTest {
                     )
                 )
             ),
-            benchmarks = emptyList(),
             capabilities = CapabilityMatrix(
                 coding = 92f,
                 reasoning = 88f,

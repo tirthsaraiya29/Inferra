@@ -48,7 +48,6 @@ class HardwareFitCalculatorTest {
                 relativeQualityScore = 95f
             )
         ),
-        benchmarks = emptyList(),
         capabilities = CapabilityMatrix(80f, 80f, 80f, 0f, 80f, 80f, 80f, 80f),
         lineage = LineageInfo(),
         repoUrl = "https://huggingface.co"
@@ -85,7 +84,6 @@ class HardwareFitCalculatorTest {
                 relativeQualityScore = 95f
             )
         ),
-        benchmarks = emptyList(),
         capabilities = CapabilityMatrix(80f, 80f, 80f, 0f, 80f, 80f, 80f, 80f),
         lineage = LineageInfo(),
         repoUrl = "https://huggingface.co"
