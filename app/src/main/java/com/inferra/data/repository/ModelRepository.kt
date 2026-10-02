@@ -24,10 +24,13 @@ import com.inferra.domain.model.ModelTask
 import com.inferra.domain.model.UiState
 import com.inferra.domain.usecase.CanonicalModelResolver
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -75,12 +78,40 @@ class ModelRepository(
         }.flowOn(Dispatchers.IO)
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     fun observeAndroidModelDetails(modelId: String): Flow<UiState<ModelWithDetails>> {
-        return androidModelDao.getModelWithDetails(modelId).map { details ->
-            if (details == null) {
-                UiState.Empty(EmptyReason.NO_RESULTS)
+        val canonicalId = CanonicalModelResolver.resolveCanonicalId(modelId)
+        val cleanId = modelId.removePrefix("canonical:").substringAfter('/')
+
+        return androidModelDao.getModelWithDetails(modelId, canonicalId, cleanId).flatMapLatest { details ->
+            if (details != null) {
+                flowOf(UiState.Success(details))
             } else {
-                UiState.Success(details)
+                flow<UiState<ModelWithDetails>> {
+                    val liveModel = modelDao.getModelById(modelId) ?: modelDao.getModelById(canonicalId)
+                    if (liveModel != null) {
+                        val entity = AndroidModelEntity(
+                            id = modelId,
+                            displayName = liveModel.name,
+                            familyName = null,
+                            organization = liveModel.author,
+                            modelType = liveModel.architecture,
+                            parameterCount = liveModel.totalParamsBillion.toInt(),
+                            contextLength = liveModel.contextLengthTokens,
+                            license = liveModel.licenseName,
+                            isOpenWeights = 1,
+                            updatedAt = liveModel.updatedAt,
+                        )
+                        androidModelDao.insertModels(listOf(entity))
+                    }
+                    androidModelDao.getModelWithDetails(modelId, canonicalId, cleanId).collect { syncedDetails ->
+                        if (syncedDetails != null) {
+                            emit(UiState.Success(syncedDetails))
+                        } else {
+                            emit(UiState.Empty(EmptyReason.NO_RESULTS))
+                        }
+                    }
+                }
             }
         }.catch { e ->
             Log.e(TAG, "Error querying details for $modelId: ${e.message}", e)
@@ -89,7 +120,10 @@ class ModelRepository(
     }
 
     fun observeBenchmarkScores(modelId: String): Flow<List<BenchmarkScoreUiModel>> {
-        return androidModelDao.getBenchmarkScoresForModel(modelId).map { queryResults ->
+        val canonicalId = CanonicalModelResolver.resolveCanonicalId(modelId)
+        val cleanId = modelId.removePrefix("canonical:").substringAfter('/')
+
+        return androidModelDao.getBenchmarkScoresForModel(modelId, canonicalId, cleanId).map { queryResults ->
             queryResults.map { (benchmarkId, name, domain, metricName, score, scoreNormalized, measurementType) ->
                 BenchmarkScoreUiModel(
                     benchmarkId = benchmarkId,

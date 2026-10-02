@@ -27,14 +27,14 @@ interface AndroidModelDao {
     suspend fun getModelById(id: String): AndroidModelEntity?
 
     @Transaction
-    @Query("SELECT * FROM android_models WHERE id = :id LIMIT 1")
-    fun getModelWithDetails(id: String): Flow<ModelWithDetails?>
+    @Query("SELECT * FROM android_models WHERE id = :id OR id = :canonicalId OR id LIKE '%' || :cleanId || '%' OR display_name LIKE '%' || :cleanId || '%' LIMIT 1")
+    fun getModelWithDetails(id: String, canonicalId: String = id, cleanId: String = id): Flow<ModelWithDetails?>
 
-    @Query("SELECT * FROM android_artifacts WHERE model_id = :modelId")
-    fun getArtifactsForModel(modelId: String): Flow<List<AndroidArtifactEntity>>
+    @Query("SELECT * FROM android_artifacts WHERE model_id = :modelId OR model_id = :canonicalId OR model_id LIKE '%' || :cleanId || '%'")
+    fun getArtifactsForModel(modelId: String, canonicalId: String = modelId, cleanId: String = modelId): Flow<List<AndroidArtifactEntity>>
 
-    @Query("SELECT * FROM android_provider_pricing WHERE model_id = :modelId ORDER BY updated_at DESC")
-    fun getProviderPricingForModel(modelId: String): Flow<List<AndroidProviderPricingEntity>>
+    @Query("SELECT * FROM android_provider_pricing WHERE model_id = :modelId OR model_id = :canonicalId OR model_id LIKE '%' || :cleanId || '%' ORDER BY updated_at DESC")
+    fun getProviderPricingForModel(modelId: String, canonicalId: String = modelId, cleanId: String = modelId): Flow<List<AndroidProviderPricingEntity>>
 
     @Query("SELECT * FROM android_benchmarks ORDER BY domain, name")
     fun getAllBenchmarks(): Flow<List<AndroidBenchmarkEntity>>
@@ -50,10 +50,10 @@ interface AndroidModelDao {
             s.measurement_type AS measurementType
         FROM android_benchmarks b
         LEFT JOIN android_benchmark_scores s 
-            ON b.benchmark_id = s.benchmark_id AND s.model_id = :modelId
+            ON b.benchmark_id = s.benchmark_id AND (s.model_id = :modelId OR s.model_id = :canonicalId OR s.model_id LIKE '%' || :cleanId || '%')
         ORDER BY b.domain, b.name
     """)
-    fun getBenchmarkScoresForModel(modelId: String): Flow<List<BenchmarkScoreQueryResult>>
+    fun getBenchmarkScoresForModel(modelId: String, canonicalId: String = modelId, cleanId: String = modelId): Flow<List<BenchmarkScoreQueryResult>>
 
     @Query("""
         SELECT * FROM android_models
