@@ -3,15 +3,7 @@ package com.inferra.domain.model
 import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 
-/**
- * Data provenance classification as mandated by product philosophy.
- */
-@Serializable
-enum class DataCategory {
-    SOURCE_FACT,     // Directly from repository metadata
-    MEASUREMENT,     // Empirical benchmark/throughput measurement
-    DERIVED          // App-calculated intelligence (hardware fit, estimated speed)
-}
+
 
 @Serializable
 enum class Modality {
@@ -55,16 +47,7 @@ data class QuantizationInfo(
     val qualityEvidence: QualityEvidence = QualityEvidence()
 )
 
-@Immutable
-@Serializable
-data class BenchmarkScore(
-    val name: String,               // MMLU, HumanEval, GSM8K, MATH, LiveBench, GPQA
-    val score: Float,               // e.g. 84.5
-    val maxScore: Float = 100f,
-    val category: String,
-    val provenance: String,          // "Author Published", "Independent Benchmark", "Community Measured"
-    val dataCategory: DataCategory = DataCategory.MEASUREMENT
-)
+
 
 @Immutable
 @Serializable
