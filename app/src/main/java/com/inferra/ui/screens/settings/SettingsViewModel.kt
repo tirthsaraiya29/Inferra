@@ -16,11 +16,11 @@ data class SettingsUiState(
     val isTelemetryEnabled: Boolean = false,
     val autoRefreshData: Boolean = true,
     val modelStoragePath: String = "",
-    val hfToken: String = ""
+    val hfToken: String = "",
 )
 
 class SettingsViewModel(
-    private val settingsRepository: SettingsRepository? = null
+    private val settingsRepository: SettingsRepository? = null,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -37,7 +37,7 @@ class SettingsViewModel(
                             isTelemetryEnabled = settings.isTelemetryEnabled,
                             autoRefreshData = settings.autoRefreshData,
                             modelStoragePath = settings.modelStoragePath,
-                            hfToken = settings.hfToken
+                            hfToken = settings.hfToken,
                         )
                     }
                 }

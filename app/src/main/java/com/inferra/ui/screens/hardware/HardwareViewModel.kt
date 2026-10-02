@@ -13,11 +13,11 @@ import kotlinx.coroutines.launch
 
 data class HardwareUiState(
     val profiles: List<HardwareProfile> = emptyList(),
-    val activeProfile: HardwareProfile? = null
+    val activeProfile: HardwareProfile? = null,
 )
 
 class HardwareViewModel(
-    private val hardwareRepository: HardwareRepository
+    private val hardwareRepository: HardwareRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HardwareUiState())
@@ -32,7 +32,7 @@ class HardwareViewModel(
         gpuName: String,
         vramGb: Float,
         ramGb: Float,
-        cpuName: String
+        cpuName: String,
     ) {
         viewModelScope.launch {
             val newProfile = HardwareProfile(
@@ -46,7 +46,7 @@ class HardwareViewModel(
                 osName = "Windows 11 / Linux",
                 preferredRuntime = "llama.cpp",
                 availableStorageGb = 1000f,
-                isLocalDevice = false
+                isLocalDevice = false,
             )
             hardwareRepository.addCustomProfile(newProfile)
             loadProfiles()
@@ -75,7 +75,7 @@ class HardwareViewModel(
                 _uiState.update {
                     it.copy(
                         profiles = profiles,
-                        activeProfile = active
+                        activeProfile = active,
                     )
                 }
             }

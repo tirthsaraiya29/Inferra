@@ -19,13 +19,13 @@ data class DownloadsUiState(
     val jobs: List<DownloadJob> = emptyList(),
     val devices: List<DeviceTarget> = emptyList(),
     val installedLocalModels: List<LocalModelEntity> = emptyList(),
-    val selectedManifest: String? = null
+    val selectedManifest: String? = null,
 )
 
 class DownloadsViewModel(
     private val downloadRepository: DownloadRepository,
     private val companionRepository: CompanionRepository,
-    private val localModelDao: LocalModelDao? = null
+    private val localModelDao: LocalModelDao? = null,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DownloadsUiState())
@@ -61,7 +61,7 @@ class DownloadsViewModel(
                 _uiState.update {
                     it.copy(
                         jobs = jobs,
-                        devices = devices
+                        devices = devices,
                     )
                 }
             }
