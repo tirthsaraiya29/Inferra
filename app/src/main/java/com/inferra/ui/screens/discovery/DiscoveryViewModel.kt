@@ -11,9 +11,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
+import java.util.concurrent.ConcurrentHashMap
 
 data class CatalogFilterState(
     val searchQuery: String = "",
@@ -26,29 +26,31 @@ data class CatalogFilterState(
 )
 
 class DiscoveryViewModel(
-    private val modelRepository: ModelRepository
+    private val modelRepository: ModelRepository,
 ) : ViewModel() {
 
     private val _filterState = MutableStateFlow(CatalogFilterState())
     val filterState: StateFlow<CatalogFilterState> = _filterState.asStateFlow()
 
+    private val topScoresCache = ConcurrentHashMap<String, StateFlow<List<BenchmarkScoreUiModel>>>()
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val catalogUiState: StateFlow<UiState<List<AndroidModelEntity>>> = _filterState
-        .flatMapLatest { filter ->
+        .flatMapLatest { (searchQuery, minParamsBillion, maxParamsBillion, minContextLength, isOpenWeightsOnly, licenseQuery, sortBy) ->
             modelRepository.observeAndroidModels(
-                query = filter.searchQuery,
-                minParams = filter.minParamsBillion,
-                maxParams = filter.maxParamsBillion,
-                minContext = filter.minContextLength,
-                isOpenWeights = filter.isOpenWeightsOnly,
-                license = filter.licenseQuery,
-                sortBy = filter.sortBy
+                query = searchQuery,
+                minParams = minParamsBillion,
+                maxParams = maxParamsBillion,
+                minContext = minContextLength,
+                isOpenWeights = isOpenWeightsOnly,
+                license = licenseQuery,
+                sortBy = sortBy,
             )
         }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = UiState.Loading
+            initialValue = UiState.Loading,
         )
 
     fun onSearchQueryChanged(query: String) {
@@ -58,7 +60,7 @@ class DiscoveryViewModel(
     fun onParamsRangeChanged(minParams: Int?, maxParams: Int?) {
         _filterState.value = _filterState.value.copy(
             minParamsBillion = minParams,
-            maxParamsBillion = maxParams
+            maxParamsBillion = maxParams,
         )
     }
 
@@ -79,11 +81,13 @@ class DiscoveryViewModel(
     }
 
     fun getTopScoresForModel(modelId: String): StateFlow<List<BenchmarkScoreUiModel>> {
-        return modelRepository.observeBenchmarkScores(modelId)
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5000),
-                initialValue = emptyList()
-            )
+        return topScoresCache.getOrPut(modelId) {
+            modelRepository.observeBenchmarkScores(modelId)
+                .stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(5000),
+                    initialValue = emptyList(),
+                )
+        }
     }
 }

@@ -49,7 +49,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.inferra.data.local.AndroidArtifactEntity
 import com.inferra.data.local.AndroidModelEntity
 import com.inferra.data.local.AndroidProviderPricingEntity
 import com.inferra.data.local.ModelWithDetails
@@ -70,7 +69,7 @@ import com.inferra.ui.theme.SageGreenDark
 fun ModelDetailScreen(
     viewModel: ModelDetailViewModel,
     onBackClick: () -> Unit,
-    onLaunchUrl: (String) -> Unit
+    onLaunchUrl: (String) -> Unit,
 ) {
     val state by viewModel.viewState.collectAsState()
     val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()

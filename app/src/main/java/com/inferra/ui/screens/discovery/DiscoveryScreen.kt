@@ -47,8 +47,8 @@ import com.inferra.ui.components.ExecutiveModelCard
 fun DiscoveryScreen(
     viewModel: DiscoveryViewModel,
     onNavigateToModel: (String) -> Unit,
-    onNavigateToSearch: (String) -> Unit,
-    onNavigateToHardware: () -> Unit = {}
+    onNavigateToSearch: (String) -> Unit = {},
+    onNavigateToHardware: () -> Unit = {},
 ) {
     val catalogState by viewModel.catalogUiState.collectAsState()
     val filterState by viewModel.filterState.collectAsState()

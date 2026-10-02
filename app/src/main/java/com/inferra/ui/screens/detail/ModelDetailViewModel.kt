@@ -18,26 +18,26 @@ data class ModelDetailViewState(
     val detailsState: UiState<ModelWithDetails> = UiState.Loading,
     val benchmarkScores: List<BenchmarkScoreUiModel> = emptyList(),
     val provenanceInfo: ProvenanceInfo? = null,
-    val isWatchlisted: Boolean = false
+    val isWatchlisted: Boolean = false,
 )
 
 class ModelDetailViewModel(
     private val modelId: String,
-    private val modelRepository: ModelRepository
+    private val modelRepository: ModelRepository,
 ) : ViewModel() {
 
     val viewState: StateFlow<ModelDetailViewState> = combine(
         modelRepository.observeAndroidModelDetails(modelId),
         modelRepository.observeBenchmarkScores(modelId),
-        modelRepository.isWatchlisted(modelId)
+        modelRepository.isWatchlisted(modelId),
     ) { detailsState, scores, isWatchlisted ->
         val provInfo = if (detailsState is UiState.Success) {
-            val model = detailsState.data.model
+            val (model) = detailsState.data
             ProvenanceResolver.resolveProvenance(
                 modelId = model.id,
                 organization = model.organization,
                 isOpenWeights = model.isOpenWeights == 1,
-                licenseName = model.license
+                licenseName = model.license,
             )
         } else null
 
@@ -45,12 +45,12 @@ class ModelDetailViewModel(
             detailsState = detailsState,
             benchmarkScores = scores,
             provenanceInfo = provInfo,
-            isWatchlisted = isWatchlisted
+            isWatchlisted = isWatchlisted,
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = ModelDetailViewState()
+        initialValue = ModelDetailViewState(),
     )
 
     fun toggleWatchlist() {

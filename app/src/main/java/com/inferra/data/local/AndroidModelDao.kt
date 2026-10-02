@@ -57,10 +57,16 @@ interface AndroidModelDao {
 
     @Query("""
         SELECT * FROM android_models
-        WHERE (:query IS NULL OR :query = '' OR display_name LIKE '%' || :query || '%' OR organization LIKE '%' || :query || '%' OR family_name LIKE '%' || :query || '%')
-          AND (:minParams IS NULL OR parameter_count >= :minParams OR parameter_count IS NULL)
-          AND (:maxParams IS NULL OR parameter_count <= :maxParams OR parameter_count IS NULL)
-          AND (:minContext IS NULL OR context_length >= :minContext OR context_length IS NULL)
+        WHERE (:query IS NULL OR :query = '' 
+            OR id LIKE '%' || :query || '%' 
+            OR display_name LIKE '%' || :query || '%' 
+            OR organization LIKE '%' || :query || '%' 
+            OR family_name LIKE '%' || :query || '%'
+            OR model_type LIKE '%' || :query || '%'
+            OR license LIKE '%' || :query || '%')
+          AND (:minParams IS NULL OR (parameter_count IS NOT NULL AND parameter_count >= :minParams))
+          AND (:maxParams IS NULL OR (parameter_count IS NOT NULL AND parameter_count <= :maxParams))
+          AND (:minContext IS NULL OR (context_length IS NOT NULL AND context_length >= :minContext))
           AND (:isOpenWeights IS NULL OR is_open_weights = :isOpenWeights)
           AND (:license IS NULL OR :license = '' OR license LIKE '%' || :license || '%')
         ORDER BY 
@@ -75,7 +81,7 @@ interface AndroidModelDao {
         minContext: Int?,
         isOpenWeights: Int?,
         license: String?,
-        sortBy: String = "updated_at"
+        sortBy: String = "updated_at",
     ): Flow<List<AndroidModelEntity>>
 
     @Query("SELECT * FROM android_models_wide")
