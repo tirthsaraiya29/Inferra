@@ -69,6 +69,7 @@ object DatabaseAssetManager {
                 db.execSQL("PRAGMA foreign_keys = OFF;")
                 db.beginTransaction()
                 try {
+                    // 1. android_models
                     db.execSQL(
                         """
                         CREATE TABLE IF NOT EXISTS android_models_temp (
@@ -88,13 +89,136 @@ object DatabaseAssetManager {
                     db.execSQL("INSERT OR IGNORE INTO android_models_temp SELECT * FROM android_models;")
                     db.execSQL("DROP TABLE android_models;")
                     db.execSQL("ALTER TABLE android_models_temp RENAME TO android_models;")
+
+                    // 2. android_artifacts
+                    db.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS android_artifacts_temp (
+                            artifact_id TEXT NOT NULL PRIMARY KEY,
+                            model_id TEXT NOT NULL,
+                            format TEXT NOT NULL,
+                            quantization TEXT,
+                            file_size_bytes INTEGER,
+                            repository_id TEXT NOT NULL,
+                            file_path TEXT,
+                            FOREIGN KEY(model_id) REFERENCES android_models(id) ON DELETE CASCADE
+                        )
+                        """.trimIndent()
+                    )
+                    db.execSQL("INSERT OR IGNORE INTO android_artifacts_temp SELECT * FROM android_artifacts;")
+                    db.execSQL("DROP TABLE android_artifacts;")
+                    db.execSQL("ALTER TABLE android_artifacts_temp RENAME TO android_artifacts;")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_android_artifacts_model_id ON android_artifacts(model_id);")
+
+                    // 3. android_benchmarks
+                    db.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS android_benchmarks_temp (
+                            benchmark_id TEXT NOT NULL PRIMARY KEY,
+                            name TEXT NOT NULL,
+                            domain TEXT NOT NULL,
+                            metric_name TEXT NOT NULL
+                        )
+                        """.trimIndent()
+                    )
+                    db.execSQL("INSERT OR IGNORE INTO android_benchmarks_temp SELECT * FROM android_benchmarks;")
+                    db.execSQL("DROP TABLE android_benchmarks;")
+                    db.execSQL("ALTER TABLE android_benchmarks_temp RENAME TO android_benchmarks;")
+
+                    // 4. android_benchmark_scores
+                    db.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS android_benchmark_scores_temp (
+                            id TEXT NOT NULL PRIMARY KEY,
+                            model_id TEXT NOT NULL,
+                            benchmark_id TEXT NOT NULL,
+                            score REAL NOT NULL,
+                            score_normalized REAL NOT NULL,
+                            measurement_type TEXT NOT NULL,
+                            FOREIGN KEY(model_id) REFERENCES android_models(id) ON DELETE CASCADE,
+                            FOREIGN KEY(benchmark_id) REFERENCES android_benchmarks(benchmark_id) ON DELETE NO ACTION
+                        )
+                        """.trimIndent()
+                    )
+                    db.execSQL("INSERT OR IGNORE INTO android_benchmark_scores_temp SELECT * FROM android_benchmark_scores;")
+                    db.execSQL("DROP TABLE android_benchmark_scores;")
+                    db.execSQL("ALTER TABLE android_benchmark_scores_temp RENAME TO android_benchmark_scores;")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_android_benchmark_scores_model_id ON android_benchmark_scores(model_id);")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_android_benchmark_scores_benchmark_id ON android_benchmark_scores(benchmark_id);")
+
+                    // 5. android_provider_pricing
+                    db.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS android_provider_pricing_temp (
+                            id TEXT NOT NULL PRIMARY KEY,
+                            model_id TEXT NOT NULL,
+                            provider_name TEXT NOT NULL,
+                            input_cost_per_m REAL,
+                            output_cost_per_m REAL,
+                            context_window INTEGER,
+                            updated_at TEXT NOT NULL,
+                            FOREIGN KEY(model_id) REFERENCES android_models(id) ON DELETE CASCADE
+                        )
+                        """.trimIndent()
+                    )
+                    db.execSQL("INSERT OR IGNORE INTO android_provider_pricing_temp SELECT * FROM android_provider_pricing;")
+                    db.execSQL("DROP TABLE android_provider_pricing;")
+                    db.execSQL("ALTER TABLE android_provider_pricing_temp RENAME TO android_provider_pricing;")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_android_provider_pricing_model_id ON android_provider_pricing(model_id);")
+
+                    // 6. android_models_wide
+                    db.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS android_models_wide_temp (
+                            model_id TEXT NOT NULL PRIMARY KEY,
+                            display_name TEXT NOT NULL,
+                            organization TEXT NOT NULL,
+                            parameter_count INTEGER,
+                            context_length INTEGER,
+                            license TEXT,
+                            mmlu_pro REAL,
+                            gpqa REAL,
+                            math_l5 REAL,
+                            ifeval REAL,
+                            musr REAL,
+                            bbh REAL,
+                            aime REAL,
+                            gsm8k REAL,
+                            swe_bench_verified REAL,
+                            swe_bench_lite REAL,
+                            humaneval_plus REAL,
+                            mbpp_plus REAL,
+                            livecodebench REAL,
+                            aider_polyglot REAL,
+                            bfcl REAL,
+                            tau_bench REAL,
+                            gaia REAL,
+                            ruler REAL,
+                            mmmu REAL,
+                            mathvista REAL,
+                            chartqa REAL,
+                            docvqa REAL,
+                            video_mme REAL,
+                            livebench REAL,
+                            simpleqa REAL,
+                            arena_elo REAL,
+                            arena_coding_elo REAL,
+                            arena_hard_elo REAL,
+                            FOREIGN KEY(model_id) REFERENCES android_models(id) ON DELETE CASCADE
+                        )
+                        """.trimIndent()
+                    )
+                    db.execSQL("INSERT OR IGNORE INTO android_models_wide_temp SELECT * FROM android_models_wide;")
+                    db.execSQL("DROP TABLE android_models_wide;")
+                    db.execSQL("ALTER TABLE android_models_wide_temp RENAME TO android_models_wide;")
+
                     db.setTransactionSuccessful()
                 } finally {
                     db.endTransaction()
                     db.execSQL("PRAGMA foreign_keys = ON;")
                 }
             }
-            Log.i(TAG, "Database schema sanitized successfully.")
+            Log.i(TAG, "All pre-packaged database tables sanitized successfully.")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to sanitize database schema: ${e.message}", e)
         }
