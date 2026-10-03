@@ -1,13 +1,13 @@
 # Inferra — Open-Weight AI Model Intelligence Platform
 
-[![Android Build](https://img.shields.io/badge/Android-API%2031%2B-00F2FE?style=for-the-badge&logo=android)](https://developer.android.com)[cite: 1]
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.2.10-8A2BE2?style=for-the-badge&logo=kotlin)](https://kotlinlang.org)[cite: 1]
-[![Jetpack Compose](https://img.shields.io/badge/Compose-Material%203-00F5A0?style=for-the-badge&logo=jetpackcompose)](https://developer.android.com/jetpack/compose)[cite: 1]
+[![Android Build](https://img.shields.io/badge/Android-API%2031%2B-00F2FE?style=for-the-badge&logo=android)](https://developer.android.com)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.2.10-8A2BE2?style=for-the-badge&logo=kotlin)](https://kotlinlang.org)
+[![Jetpack Compose](https://img.shields.io/badge/Compose-Material%203-00F5A0?style=for-the-badge&logo=jetpackcompose)](https://developer.android.com/jetpack/compose)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=for-the-badge)](LICENSE)
 [![Issues](https://img.shields.io/github/issues/tirthsaraiya29/Inferra?style=for-the-badge&color=orange)](https://github.com/tirthsaraiya29/Inferra/issues)
 [![Share on X](https://img.shields.io/badge/Share-Post%20on%20X-black?style=for-the-badge&logo=x)](https://twitter.com/intent/tweet?text=Inspect%20open-weight%20LLM%20runability,%20GGUF%20quants,%20and%20hardware%20fit%20on%20Android%20with%20Inferra:&url=https://github.com/tirthsaraiya29/Inferra&hashtags=LocalLLM,OpenSource,AndroidDev,MachineLearning)
 
-Inferra is an open-source Android intelligence and decision engine designed for AI engineers, researchers, and local-model practitioners who need to determine which open-weight model will actually run on their target hardware before committing storage or compute[cite: 1].
+Inferra is an open-source Android intelligence and decision engine designed for AI engineers, researchers, and local-model practitioners who need to determine which open-weight model will actually run on their target hardware before committing storage or compute.
 
 ---
 
@@ -31,21 +31,21 @@ Inferra is an open-source Android intelligence and decision engine designed for 
 
 ## 🌟 Key Features
 
-* **⚡ Live Runability & Hardware Fit Calculator**: Real-time VRAM/RAM estimation, GPU layer offloading breakdown, estimated inference tokens/sec, and Time-To-First-Token (TTFT) prediction against hardware profiles (e.g., RTX 4090, Apple Silicon, local Android chipsets)[cite: 1].
-* **📦 Quantization Explorer**: Deep exploration of GGUF (Q4_K_M, Q8_0, Q5_K_M, Q3_K_M), AWQ, and EXL2 formats with explicit file sizes, perplexity/quality trade-offs, and memory bounds[cite: 1].
-* **🌳 Interactive Model Lineage Tree**: Visual hierarchy tracing Base Models → Instruction/Alignment Fine-tunes → Quantizations → LoRA Adapters[cite: 1].
-* **⚖ Side-by-Side Model Comparison**: Compare up to 4 models simultaneously across parameters, active MoE parameters, context lengths, licenses, and verified benchmarks[cite: 1].
-* **📡 Send-To-PC Download Dispatch**: Queue durable, resumable model downloads to desktop companion nodes without storing multi-gigabyte weights on mobile devices[cite: 1].
-* **🧪 Provenance-Aware Benchmarks**: Explicit isolation between upstream metadata (author claims), objective benchmarks (HumanEval, MMLU-Pro, GSM8K, GPQA), and derived on-device calculations[cite: 1].
+* **⚡ Live Runability & Hardware Fit Calculator**: Real-time VRAM/RAM estimation, GPU layer offloading breakdown, estimated inference tokens/sec, and Time-To-First-Token (TTFT) prediction against hardware profiles (e.g., RTX 4090, Apple Silicon, local Android chipsets).
+* **📦 Quantization Explorer**: Deep exploration of GGUF (Q4_K_M, Q8_0, Q5_K_M, Q3_K_M), AWQ, and EXL2 formats with explicit file sizes, perplexity/quality trade-offs, and memory bounds.
+* **🌳 Interactive Model Lineage Tree**: Visual hierarchy tracing Base Models → Instruction/Alignment Fine-tunes → Quantizations → LoRA Adapters.
+* **⚖ Side-by-Side Model Comparison**: Compare up to 4 models simultaneously across parameters, active MoE parameters, context lengths, licenses, and verified benchmarks.
+* **📡 Send-To-PC Download Dispatch**: Queue durable, resumable model downloads to desktop companion nodes without storing multi-gigabyte weights on mobile devices.
+* **🧪 Provenance-Aware Benchmarks**: Explicit isolation between upstream metadata (author claims), objective benchmarks (HumanEval, MMLU-Pro, GSM8K, GPQA), and derived on-device calculations.
 
 ---
 
 ## 💻 Requirements
 
-* **Build Environment**: Android Studio (Ladybug 2024.2+ / Jellyfish / Koala)[cite: 1]
-* **Java Development Kit**: JDK 17 or JDK 21[cite: 1]
-* **Android Target**: `compileSdk = 37`, `minSdk = 31` (Android 12+)[cite: 1]
-* **Companion Node (Optional)**: Desktop workstation running the Inferra daemon to accept remote download dispatch[cite: 1].
+* **Build Environment**: Android Studio (Ladybug 2024.2+ / Jellyfish / Koala)
+* **Java Development Kit**: JDK 17 or JDK 21
+* **Android Target**: `compileSdk = 37`, `minSdk = 31` (Android 12+)
+* **Companion Node (Optional)**: Desktop workstation running the Inferra daemon to accept remote download dispatch.
 
 ---
 
@@ -108,17 +108,17 @@ Inferra applies modern Android clean architecture patterns (`com.inferra`):
 app
 └── com.inferra
     ├── data
-    │   ├── local         // Room Database (ModelEntity, DownloadJobEntity, HardwareProfileEntity)[cite: 1]
-    │   ├── network       // HuggingFace Hub API client & DTO mappers[cite: 1]
-    │   └── repository    // ModelRepository, HardwareRepository, DownloadRepository[cite: 1]
+    │   ├── local         // Room Database (ModelEntity, DownloadJobEntity, HardwareProfileEntity)
+    │   ├── network       // HuggingFace Hub API client & DTO mappers
+    │   └── repository    // ModelRepository, HardwareRepository, DownloadRepository
     ├── domain
-    │   ├── model         // AiModel, QuantizationInfo, HardwareProfile, BenchmarkScore[cite: 1]
-    │   └── usecase       // HardwareFitCalculator engine[cite: 1]
+    │   ├── model         // AiModel, QuantizationInfo, HardwareProfile, BenchmarkScore
+    │   └── usecase       // HardwareFitCalculator engine
     └── ui
-        ├── components    // GlassCard, GlassButton, CapabilityRadar, LineageGraphView[cite: 1]
-        ├── navigation    // Compose Navigation Host & GlassBottomBar[cite: 1]
-        ├── screens       // Discovery, Search, Detail, Compare, Hardware, Downloads[cite: 1]
-        └── theme         // Cyber-Obsidian palette[cite: 1]
+        ├── components    // GlassCard, GlassButton, CapabilityRadar, LineageGraphView
+        ├── navigation    // Compose Navigation Host & GlassBottomBar
+        ├── screens       // Discovery, Search, Detail, Compare, Hardware, Downloads
+        └── theme         // Cyber-Obsidian palette
 
 ```
 
