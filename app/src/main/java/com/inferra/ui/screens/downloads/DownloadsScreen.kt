@@ -5,10 +5,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,6 +23,7 @@ import androidx.compose.material.icons.filled.Lan
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,15 +42,10 @@ import com.inferra.ui.components.GlassBadge
 import com.inferra.ui.components.GlassButton
 import com.inferra.ui.components.GlassCard
 import com.inferra.ui.components.GlassTextField
-import com.inferra.ui.components.LiquidGlassBackground
-import com.inferra.ui.theme.AccentAzure
+import com.inferra.ui.components.InferraBackground
 import com.inferra.ui.theme.FitBorderline
 import com.inferra.ui.theme.FitExcellent
 import com.inferra.ui.theme.FitInsufficient
-import com.inferra.ui.theme.InkBg
-import com.inferra.ui.theme.TextMuted
-import com.inferra.ui.theme.TextPrimary
-import com.inferra.ui.theme.TextSecondary
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -60,42 +59,60 @@ fun DownloadsScreen(
     var devName by remember { mutableStateOf("") }
     var devIp by remember { mutableStateOf("192.168.1.") }
 
-    LiquidGlassBackground {
-        Column(modifier = Modifier.fillMaxSize()) {
+    val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+
+    InferraBackground {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = statusBarPadding)
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 20.dp)
+                    .padding(horizontal = 20.dp, vertical = 12.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(imageVector = Icons.Default.Download, contentDescription = "Downloads", tint = AccentAzure)
+                            Icon(
+                                imageVector = Icons.Default.Download,
+                                contentDescription = "Downloads",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "Downloads",
-                                fontSize = 28.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = TextPrimary
+                                style = MaterialTheme.typography.displayLarge.copy(
+                                    fontSize = 24.sp,
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                color = MaterialTheme.colorScheme.onBackground
                             )
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "Monitor downloads dispatched to companion workstations",
-                            fontSize = 13.sp,
-                            color = TextSecondary
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
+                    Spacer(modifier = Modifier.width(12.dp))
+
                     GlassButton(
                         onClick = { showPairDialog = true },
-                        accentColor = AccentAzure
+                        accentColor = MaterialTheme.colorScheme.primary
                     ) {
-                        Icon(imageVector = Icons.Default.Lan, contentDescription = "Pair", modifier = Modifier.height(14.dp))
+                        Icon(
+                            imageVector = Icons.Default.Lan,
+                            contentDescription = "Pair",
+                            modifier = Modifier.height(14.dp)
+                        )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(text = "Pair PC", fontSize = 12.sp)
                     }
@@ -104,11 +121,15 @@ fun DownloadsScreen(
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 110.dp),
+                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 120.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 item {
-                    Text(text = "Active Jobs", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                    Text(
+                        text = "Active Jobs",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
                 }
 
                 if (state.jobs.isEmpty()) {
@@ -116,8 +137,8 @@ fun DownloadsScreen(
                         GlassCard(modifier = Modifier.fillMaxWidth()) {
                             Text(
                                 text = "No active download jobs queued.",
-                                color = TextMuted,
-                                fontSize = 13.sp,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(18.dp)
                             )
                         }
@@ -125,11 +146,11 @@ fun DownloadsScreen(
                 } else {
                     items(state.jobs, key = { it.id }) { job ->
                         val (statusText, statusColor) = when (job.status) {
-                            DownloadStatus.DOWNLOADING -> Pair("Downloading (${formatSpeed(job.speedBytesPerSec)})", AccentAzure)
+                            DownloadStatus.DOWNLOADING -> Pair("Downloading (${formatSpeed(job.speedBytesPerSec)})", MaterialTheme.colorScheme.primary)
                             DownloadStatus.QUEUED -> Pair("Queued", FitBorderline)
-                            DownloadStatus.WAITING_FOR_DEVICE -> Pair("Waiting for PC", TextMuted)
+                            DownloadStatus.WAITING_FOR_DEVICE -> Pair("Waiting for PC", MaterialTheme.colorScheme.outline)
                             DownloadStatus.COMPLETED -> Pair("Completed", FitExcellent)
-                            DownloadStatus.PAUSED -> Pair("Paused", TextMuted)
+                            DownloadStatus.PAUSED -> Pair("Paused", MaterialTheme.colorScheme.outline)
                             DownloadStatus.FAILED -> Pair("Failed", FitInsufficient)
                         }
 
@@ -141,11 +162,23 @@ fun DownloadsScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text(text = job.author, fontSize = 12.sp, color = AccentAzure, fontWeight = FontWeight.Medium)
-                                        Text(text = job.modelName, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                        Text(
+                                            text = job.author,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                        Text(
+                                            text = job.modelName,
+                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
                                     }
                                     IconButton(onClick = { viewModel.cancelJob(job.id) }) {
-                                        Icon(imageVector = Icons.Default.Close, contentDescription = "Cancel", tint = TextMuted)
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "Cancel",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
                                     }
                                 }
 
@@ -156,7 +189,7 @@ fun DownloadsScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    GlassBadge(text = job.quantType, color = TextMuted)
+                                    GlassBadge(text = job.quantType, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     GlassBadge(text = statusText, color = statusColor)
                                 }
 
@@ -165,8 +198,8 @@ fun DownloadsScreen(
                                 val progressPct = if (job.totalBytes > 0) (job.downloadedBytes.toFloat() / job.totalBytes.toFloat()) else 0f
                                 Text(
                                     text = "Target: ${job.targetDeviceName} • Progress: ${(progressPct * 100).toInt()}% • ETA: ${job.etaSeconds}s",
-                                    fontSize = 12.sp,
-                                    color = TextSecondary
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -175,7 +208,11 @@ fun DownloadsScreen(
 
                 item {
                     Spacer(modifier = Modifier.height(10.dp))
-                    Text(text = "Installed Local Models (${state.installedLocalModels.size})", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                    Text(
+                        text = "Installed Local Models (${state.installedLocalModels.size})",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
                 }
 
                 if (state.installedLocalModels.isEmpty()) {
@@ -183,8 +220,8 @@ fun DownloadsScreen(
                         GlassCard(modifier = Modifier.fillMaxWidth()) {
                             Text(
                                 text = "No local model files downloaded yet.",
-                                color = TextMuted,
-                                fontSize = 13.sp,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(18.dp)
                             )
                         }
@@ -199,11 +236,23 @@ fun DownloadsScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text(text = localModel.modelName, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                                        Text(text = localModel.fileName, fontSize = 12.sp, color = TextSecondary)
+                                        Text(
+                                            text = localModel.modelName,
+                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = localModel.fileName,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
                                     }
                                     IconButton(onClick = { viewModel.deleteLocalModel(localModel.id) }) {
-                                        Icon(imageVector = Icons.Default.Close, contentDescription = "Delete", tint = FitInsufficient)
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "Delete",
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
                                     }
                                 }
 
@@ -214,12 +263,12 @@ fun DownloadsScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    GlassBadge(text = localModel.quantType, color = AccentAzure)
+                                    GlassBadge(text = localModel.quantType, color = MaterialTheme.colorScheme.primary)
                                     val sizeGb = localModel.fileSizeBytes / (1024f * 1024f * 1024f)
                                     Text(
                                         text = "${String.format(Locale.US, "%.1f GB", sizeGb)} • ${localModel.format}",
-                                        fontSize = 12.sp,
-                                        color = TextMuted
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
@@ -229,7 +278,11 @@ fun DownloadsScreen(
 
                 item {
                     Spacer(modifier = Modifier.height(10.dp))
-                    Text(text = "Paired Companions", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                    Text(
+                        text = "Paired Companions",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
                 }
 
                 items(state.devices, key = { it.id }) { dev ->
@@ -242,17 +295,29 @@ fun DownloadsScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(imageVector = Icons.Default.Computer, contentDescription = "Device", tint = AccentAzure)
+                                Icon(
+                                    imageVector = Icons.Default.Computer,
+                                    contentDescription = "Device",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
-                                    Text(text = dev.name, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                                    Text(text = "${dev.ipAddress}:${dev.port} • ${dev.osName}", fontSize = 12.sp, color = TextSecondary)
+                                    Text(
+                                        text = dev.name,
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "${dev.ipAddress}:${dev.port} • ${dev.osName}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
                             }
 
                             GlassBadge(
                                 text = if (dev.isOnline) "Online" else "Offline",
-                                color = if (dev.isOnline) FitExcellent else TextMuted
+                                color = if (dev.isOnline) FitExcellent else MaterialTheme.colorScheme.outline
                             )
                         }
                     }
@@ -263,7 +328,7 @@ fun DownloadsScreen(
         if (showPairDialog) {
             ModalBottomSheet(
                 onDismissRequest = { showPairDialog = false },
-                containerColor = InkBg
+                containerColor = MaterialTheme.colorScheme.surface
             ) {
                 Column(
                     modifier = Modifier
@@ -272,9 +337,8 @@ fun DownloadsScreen(
                 ) {
                     Text(
                         text = "Pair companion workstation",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface
                     )
 
                     Spacer(modifier = Modifier.height(14.dp))
