@@ -2,7 +2,6 @@ package com.inferra.ui.navigation
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
-import android.net.Uri
 import android.widget.Toast
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.animation.AnimatedVisibility
@@ -21,10 +20,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.navigation.NavHostController
 import androidx.core.net.toUri
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -39,10 +38,6 @@ import com.inferra.data.repository.HardwareRepository
 import com.inferra.data.repository.ModelRepository
 import com.inferra.data.repository.ProviderRepository
 import com.inferra.data.repository.SettingsRepository
-import com.inferra.ui.components.glass.BackdropCaptureContainer
-import com.inferra.ui.components.glass.rememberNavigationGestureState
-import com.inferra.ui.components.glass.rememberNavigationNestedScrollConnection
-import com.inferra.ui.components.glass.rememberNavigationScrollState
 import com.inferra.ui.screens.compare.CompareScreen
 import com.inferra.ui.screens.compare.CompareViewModel
 import com.inferra.ui.screens.detail.ModelDetailScreen
@@ -123,131 +118,120 @@ fun InferraNavHost(
 
     val isDetailRoute = currentRoute?.startsWith("model_detail") == true
 
-    // Glass Navigation Scroll & Gesture State
-    val scrollState = rememberNavigationScrollState()
-    val nestedScrollConnection = rememberNavigationNestedScrollConnection(scrollState)
-    val gestureState = rememberNavigationGestureState()
-
-    BackdropCaptureContainer(modifier = Modifier.fillMaxSize()) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .nestedScroll(nestedScrollConnection)
+    Box(modifier = Modifier.fillMaxSize()) {
+        NavHost(
+            navController = navController,
+            startDestination = Screen.Discovery.route,
+            enterTransition = { fadeIn(animationSpec = tween(220)) + slideInHorizontally(animationSpec = tween(220)) { it / 6 } },
+            exitTransition = { fadeOut(animationSpec = tween(180)) + slideOutHorizontally(animationSpec = tween(180)) { -it / 6 } },
+            popEnterTransition = { fadeIn(animationSpec = tween(220)) + slideInHorizontally(animationSpec = tween(220)) { -it / 6 } },
+            popExitTransition = { fadeOut(animationSpec = tween(180)) + slideOutHorizontally(animationSpec = tween(180)) { it / 6 } },
+            modifier = Modifier.fillMaxSize()
         ) {
-            NavHost(
-                navController = navController,
-                startDestination = Screen.Discovery.route,
-                enterTransition = { fadeIn(animationSpec = tween(220)) + slideInHorizontally(animationSpec = tween(220)) { it / 6 } },
-                exitTransition = { fadeOut(animationSpec = tween(180)) + slideOutHorizontally(animationSpec = tween(180)) { -it / 6 } },
-                popEnterTransition = { fadeIn(animationSpec = tween(220)) + slideInHorizontally(animationSpec = tween(220)) { -it / 6 } },
-                popExitTransition = { fadeOut(animationSpec = tween(180)) + slideOutHorizontally(animationSpec = tween(180)) { it / 6 } },
-                modifier = Modifier.fillMaxSize()
-            ) {
-                composable(Screen.Discovery.route) {
-                    DiscoveryScreen(
-                        viewModel = discoveryViewModel,
-                        onNavigateToModel = { modelId -> navController.navigate(Screen.ModelDetail.createRoute(modelId)) },
-                        onNavigateToSearch = { query -> navController.navigate(Screen.Search.createRoute(query)) },
-                        onNavigateToHardware = { navController.navigate(Screen.Hardware.route) },
-                    )
-                }
-
-                composable(
-                    route = "search?q={q}",
-                    arguments = listOf(navArgument("q") { type = NavType.StringType; defaultValue = "" })
-                ) { backStack ->
-                    val rawQuery = backStack.arguments?.getString("q") ?: ""
-                    val query = try { URLDecoder.decode(rawQuery, "UTF-8") } catch (_: Exception) { rawQuery }
-                    SearchScreen(
-                        viewModel = searchViewModel,
-                        initialQuery = query,
-                        onNavigateToModel = { modelId -> navController.navigate(Screen.ModelDetail.createRoute(modelId)) }
-                    )
-                }
-
-                composable(Screen.Search.route) {
-                    SearchScreen(
-                        viewModel = searchViewModel,
-                        onNavigateToModel = { modelId -> navController.navigate(Screen.ModelDetail.createRoute(modelId)) }
-                    )
-                }
-
-                composable(
-                    route = "model_detail?id={id}",
-                    arguments = listOf(navArgument("id") { type = NavType.StringType; defaultValue = "" })
-                ) { backStack ->
-                    val rawModelId = backStack.arguments?.getString("id") ?: ""
-                    val modelId = try { URLDecoder.decode(rawModelId, "UTF-8") } catch (_: Exception) { rawModelId }
-
-                    val detailViewModel = remember(modelId) {
-                        ModelDetailViewModel(
-                            modelId = modelId,
-                            modelRepository = modelRepository
-                        )
-                    }
-
-                    ModelDetailScreen(
-                        viewModel = detailViewModel,
-                        onBackClick = { navController.popBackStack() },
-                        onLaunchUrl = launchUrl
-                    )
-                }
-
-                composable(Screen.Compare.route) {
-                    CompareScreen(
-                        viewModel = compareViewModel,
-                        onNavigateToModel = { modelId -> navController.navigate(Screen.ModelDetail.createRoute(modelId)) }
-                    )
-                }
-
-                composable(Screen.Hardware.route) {
-                    HardwareScreen(
-                        viewModel = hardwareViewModel
-                    )
-                }
-
-                composable(Screen.Downloads.route) {
-                    DownloadsScreen(
-                        viewModel = downloadsViewModel
-                    )
-                }
-
-                composable(Screen.Watchlist.route) {
-                    WatchlistScreen(
-                        viewModel = watchlistViewModel,
-                        onNavigateToModel = { modelId -> navController.navigate(Screen.ModelDetail.createRoute(modelId)) }
-                    )
-                }
-
-                composable(Screen.Settings.route) {
-                    SettingsScreen(
-                        viewModel = settingsViewModel
-                    )
-                }
-            }
-
-            AnimatedVisibility(
-                visible = !isDetailRoute,
-                enter = slideInVertically(animationSpec = tween(300)) { it },
-                exit = slideOutVertically(animationSpec = tween(300)) { it },
-                modifier = Modifier.align(Alignment.BottomCenter)
-            ) {
-                GlassBottomBar(
-                    currentRoute = currentRoute?.split("?")?.get(0),
-                    onNavigate = { route ->
-                        val cleanCurrent = currentRoute?.split("?")?.get(0)
-                        if (cleanCurrent != route) {
-                            navController.navigate(route) {
-                                popUpTo(navController.graph.startDestinationId) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        }
-                    },
-                    scrollState = scrollState,
-                    gestureState = gestureState
+            composable(Screen.Discovery.route) {
+                DiscoveryScreen(
+                    viewModel = discoveryViewModel,
+                    onNavigateToModel = { modelId -> navController.navigate(Screen.ModelDetail.createRoute(modelId)) },
+                    onNavigateToSearch = { query -> navController.navigate(Screen.Search.createRoute(query)) },
+                    onNavigateToHardware = { navController.navigate(Screen.Hardware.route) },
                 )
             }
+
+            composable(
+                route = "search?q={q}",
+                arguments = listOf(navArgument("q") { type = NavType.StringType; defaultValue = "" })
+            ) { backStack ->
+                val rawQuery = backStack.arguments?.getString("q") ?: ""
+                val query = try { URLDecoder.decode(rawQuery, "UTF-8") } catch (_: Exception) { rawQuery }
+                SearchScreen(
+                    viewModel = searchViewModel,
+                    initialQuery = query,
+                    onNavigateToModel = { modelId -> navController.navigate(Screen.ModelDetail.createRoute(modelId)) }
+                )
+            }
+
+            composable(Screen.Search.route) {
+                SearchScreen(
+                    viewModel = searchViewModel,
+                    onNavigateToModel = { modelId -> navController.navigate(Screen.ModelDetail.createRoute(modelId)) }
+                )
+            }
+
+            composable(
+                route = "model_detail?id={id}",
+                arguments = listOf(navArgument("id") { type = NavType.StringType; defaultValue = "" })
+            ) { backStack ->
+                val rawModelId = backStack.arguments?.getString("id") ?: ""
+                val modelId = try { URLDecoder.decode(rawModelId, "UTF-8") } catch (_: Exception) { rawModelId }
+
+                val detailViewModel = remember(modelId) {
+                    ModelDetailViewModel(
+                        modelId = modelId,
+                        modelRepository = modelRepository
+                    )
+                }
+
+                ModelDetailScreen(
+                    viewModel = detailViewModel,
+                    onBackClick = { navController.popBackStack() },
+                    onLaunchUrl = launchUrl
+                )
+            }
+
+            composable(Screen.Compare.route) {
+                CompareScreen(
+                    viewModel = compareViewModel,
+                    onNavigateToModel = { modelId -> navController.navigate(Screen.ModelDetail.createRoute(modelId)) }
+                )
+            }
+
+            composable(Screen.Hardware.route) {
+                HardwareScreen(
+                    viewModel = hardwareViewModel
+                )
+            }
+
+            composable(Screen.Downloads.route) {
+                DownloadsScreen(
+                    viewModel = downloadsViewModel
+                )
+            }
+
+            composable(Screen.Watchlist.route) {
+                WatchlistScreen(
+                    viewModel = watchlistViewModel,
+                    onNavigateToModel = { modelId -> navController.navigate(Screen.ModelDetail.createRoute(modelId)) }
+                )
+            }
+
+            composable(Screen.Settings.route) {
+                SettingsScreen(
+                    viewModel = settingsViewModel
+                )
+            }
+        }
+
+        AnimatedVisibility(
+            visible = !isDetailRoute,
+            enter = slideInVertically(animationSpec = tween(300)) { it },
+            exit = slideOutVertically(animationSpec = tween(300)) { it },
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+            InferraBottomBar(
+                currentRoute = currentRoute?.split("?")?.get(0),
+                onNavigate = { route ->
+                    val cleanCurrent = currentRoute?.split("?")?.get(0)
+                    if (cleanCurrent != route) {
+                        navController.navigate(route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                }
+            )
         }
     }
 }
