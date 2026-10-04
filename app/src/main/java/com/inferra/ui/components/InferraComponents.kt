@@ -37,7 +37,9 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -165,7 +167,9 @@ fun GlassButton(
             .padding(horizontal = 14.dp, vertical = 9.dp),
         contentAlignment = Alignment.Center
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, content = content)
+        CompositionLocalProvider(LocalContentColor provides accentColor) {
+            Row(verticalAlignment = Alignment.CenterVertically, content = content)
+        }
     }
 }
 
@@ -263,11 +267,12 @@ fun GlassBadge(
     color: Color = MaterialTheme.colorScheme.primary,
     showDot: Boolean = false
 ) {
+    val effectiveColor = if (color == MaterialTheme.colorScheme.outline) MaterialTheme.colorScheme.onSurfaceVariant else color
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(6.dp),
-        color = color.copy(alpha = 0.12f),
-        border = BorderStroke(0.5.dp, color.copy(alpha = 0.35f))
+        color = effectiveColor.copy(alpha = 0.12f),
+        border = BorderStroke(0.5.dp, effectiveColor.copy(alpha = 0.35f))
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -278,7 +283,7 @@ fun GlassBadge(
                     modifier = Modifier
                         .size(6.dp)
                         .clip(CircleShape)
-                        .background(color)
+                        .background(effectiveColor)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
             }
@@ -286,7 +291,7 @@ fun GlassBadge(
                 text = text,
                 style = MaterialTheme.typography.labelSmall.copy(
                     fontWeight = FontWeight.Medium,
-                    color = color
+                    color = effectiveColor
                 )
             )
         }

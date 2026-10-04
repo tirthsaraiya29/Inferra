@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkRemove
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -29,10 +30,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.inferra.ui.components.LiquidGlassBackground
 import com.inferra.ui.components.ModelCard
-import com.inferra.ui.theme.AccentAzure
-import com.inferra.ui.theme.TextMuted
-import com.inferra.ui.theme.TextPrimary
-import com.inferra.ui.theme.TextSecondary
 
 @Composable
 fun WatchlistScreen(
@@ -44,7 +41,7 @@ fun WatchlistScreen(
     LiquidGlassBackground {
         if (state.isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = AccentAzure, strokeWidth = 2.dp)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary, strokeWidth = 2.dp)
             }
         } else {
             Column(modifier = Modifier.fillMaxSize()) {
@@ -54,13 +51,13 @@ fun WatchlistScreen(
                         .padding(horizontal = 20.dp, vertical = 20.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.Default.Bookmark, contentDescription = "Watchlist", tint = AccentAzure)
+                        Icon(imageVector = Icons.Default.Bookmark, contentDescription = "Watchlist", tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "Saved Models",
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                     }
 
@@ -69,18 +66,32 @@ fun WatchlistScreen(
                     Text(
                         text = "Models saved to your personal library",
                         fontSize = 13.sp,
-                        color = TextSecondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
                 if (state.savedModels.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(imageVector = Icons.Default.BookmarkRemove, contentDescription = "Empty", tint = TextMuted, modifier = Modifier.height(48.dp))
+                            Icon(
+                                imageVector = Icons.Default.BookmarkRemove,
+                                contentDescription = "Empty",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.height(48.dp)
+                            )
                             Spacer(modifier = Modifier.height(12.dp))
-                            Text(text = "No saved models yet.", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                            Text(
+                                text = "No saved models yet.",
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Medium
+                            )
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text(text = "Tap the bookmark icon on any model page to save it here.", color = TextMuted, fontSize = 13.sp)
+                            Text(
+                                text = "Tap the bookmark icon on any model page to save it here.",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 13.sp
+                            )
                         }
                     }
                 } else {

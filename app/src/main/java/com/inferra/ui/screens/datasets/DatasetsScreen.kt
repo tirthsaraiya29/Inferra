@@ -265,12 +265,12 @@ fun DatasetCard(
                 Text(
                     text = "${dataset.downloadsCount} downloads • ${dataset.likesCount} likes",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     text = dataset.updatedAt,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

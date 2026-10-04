@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -36,10 +37,6 @@ import com.inferra.ui.components.GlassChip
 import com.inferra.ui.components.GlassTextField
 import com.inferra.ui.components.LiquidGlassBackground
 import com.inferra.ui.components.ModelCard
-import com.inferra.ui.theme.AccentAzure
-import com.inferra.ui.theme.TextMuted
-import com.inferra.ui.theme.TextPrimary
-import com.inferra.ui.theme.TextSecondary
 
 @Composable
 fun SearchScreen(
@@ -66,7 +63,7 @@ fun SearchScreen(
                     text = "Search",
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+                    color = MaterialTheme.colorScheme.onBackground
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -74,7 +71,7 @@ fun SearchScreen(
                 Text(
                     text = "Find models by name, architecture, capability, or specs",
                     fontSize = 14.sp,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -84,12 +81,12 @@ fun SearchScreen(
                     onValueChange = viewModel::onQueryChanged,
                     placeholderText = "Try 'coding', '32B', 'Qwen', or 'GGUF'...",
                     leadingIcon = {
-                        Icon(imageVector = Icons.Default.Search, contentDescription = "Search", tint = AccentAzure)
+                        Icon(imageVector = Icons.Default.Search, contentDescription = "Search", tint = MaterialTheme.colorScheme.primary)
                     },
                     trailingIcon = {
                         if (state.query.isNotEmpty()) {
                             IconButton(onClick = { viewModel.onQueryChanged("") }) {
-                                Icon(imageVector = Icons.Default.Close, contentDescription = "Clear", tint = TextMuted)
+                                Icon(imageVector = Icons.Default.Close, contentDescription = "Clear", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
@@ -150,10 +147,10 @@ fun SearchScreen(
                 Text(
                     text = if (state.searchResults.isNotEmpty()) "${state.searchResults.size} models found" else "",
                     fontSize = 12.sp,
-                    color = TextMuted
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 if (state.isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.height(16.dp), color = AccentAzure, strokeWidth = 2.dp)
+                    CircularProgressIndicator(modifier = Modifier.height(16.dp), color = MaterialTheme.colorScheme.primary, strokeWidth = 2.dp)
                 }
             }
 
@@ -170,7 +167,7 @@ fun SearchScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             text = "Unable to connect to Hugging Face",
-                            color = TextPrimary,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
                             textAlign = TextAlign.Center
@@ -178,7 +175,7 @@ fun SearchScreen(
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = state.errorMessage ?: "Please check your network connection.",
-                            color = TextMuted,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 13.sp,
                             textAlign = TextAlign.Center
                         )
@@ -198,14 +195,14 @@ fun SearchScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             text = "No models match your search.",
-                            color = TextPrimary,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Medium
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = "Try searching for a different keyword or selecting a suggestion above.",
-                            color = TextMuted,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 13.sp
                         )
                     }
@@ -236,7 +233,7 @@ fun SearchScreen(
                                     .padding(vertical = 12.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                CircularProgressIndicator(color = AccentAzure, strokeWidth = 2.dp, modifier = Modifier.height(20.dp))
+                                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary, strokeWidth = 2.dp, modifier = Modifier.height(20.dp))
                             }
                         }
                     }

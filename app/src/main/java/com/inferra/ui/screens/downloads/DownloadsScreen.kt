@@ -148,9 +148,9 @@ fun DownloadsScreen(
                         val (statusText, statusColor) = when (job.status) {
                             DownloadStatus.DOWNLOADING -> Pair("Downloading (${formatSpeed(job.speedBytesPerSec)})", MaterialTheme.colorScheme.primary)
                             DownloadStatus.QUEUED -> Pair("Queued", FitBorderline)
-                            DownloadStatus.WAITING_FOR_DEVICE -> Pair("Waiting for PC", MaterialTheme.colorScheme.outline)
+                            DownloadStatus.WAITING_FOR_DEVICE -> Pair("Waiting for PC", FitBorderline)
                             DownloadStatus.COMPLETED -> Pair("Completed", FitExcellent)
-                            DownloadStatus.PAUSED -> Pair("Paused", MaterialTheme.colorScheme.outline)
+                            DownloadStatus.PAUSED -> Pair("Paused", MaterialTheme.colorScheme.onSurfaceVariant)
                             DownloadStatus.FAILED -> Pair("Failed", FitInsufficient)
                         }
 
@@ -189,7 +189,7 @@ fun DownloadsScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    GlassBadge(text = job.quantType, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    GlassBadge(text = job.quantType, color = MaterialTheme.colorScheme.primary)
                                     GlassBadge(text = statusText, color = statusColor)
                                 }
 
@@ -317,7 +317,7 @@ fun DownloadsScreen(
 
                             GlassBadge(
                                 text = if (dev.isOnline) "Online" else "Offline",
-                                color = if (dev.isOnline) FitExcellent else MaterialTheme.colorScheme.outline
+                                color = if (dev.isOnline) FitExcellent else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }

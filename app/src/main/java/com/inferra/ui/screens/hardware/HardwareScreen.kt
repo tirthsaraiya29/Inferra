@@ -240,7 +240,7 @@ fun HardwareScreen(
                                         Text(
                                             text = "${profile.ramGb.toInt()} GB",
                                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            color = MaterialTheme.colorScheme.onSurface
                                         )
                                     }
                                 }
