@@ -20,9 +20,8 @@ build/
 
 # Gradle files
 .gradle/
-gradlew --stop
 
-# Local configuration file (sdk path, etc.)
+# Local configuration file (SDK path, etc.)
 local.properties
 
 # IDE & Project files
@@ -38,12 +37,17 @@ local.properties
 captures/
 *.hprof
 
-# OS specific files
+# Environment files
+.env
+
+# Database files
+/database/data/
+/database/__pycache__/
+/database/AA and Kaggle/*
+
+# Python virtual environment
+.venv/
+
+# OS-specific files
 .DS_Store
 Thumbs.db
-
-.env
-/database/data/
-/database/pycache/
-.vscode/
-.venv/
