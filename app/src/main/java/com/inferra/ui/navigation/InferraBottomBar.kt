@@ -1,5 +1,8 @@
 package com.inferra.ui.navigation
 
+import android.graphics.RenderEffect
+import android.graphics.Shader
+import android.os.Build
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
@@ -31,7 +34,6 @@ import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -43,6 +45,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
@@ -94,37 +99,37 @@ fun InferraBottomBar(
 
     // Slimy Jelly Scale Physics - Squish on Touch & Stretch on Move
     val barScaleX by animateFloatAsState(
-        targetValue = if (isPressedOrDragging) 1.040f else 1.0f,
+        targetValue = if (isPressedOrDragging) 1.050f else 1.0f,
         animationSpec = spring(
-            dampingRatio = 0.50f,
-            stiffness = 220f
+            dampingRatio = 0.45f,
+            stiffness = 180f
         ),
         label = "jellyBarScaleX"
     )
 
     val barScaleY by animateFloatAsState(
-        targetValue = if (isPressedOrDragging) 0.920f else 1.0f,
+        targetValue = if (isPressedOrDragging) 0.880f else 1.0f,
         animationSpec = spring(
-            dampingRatio = 0.50f,
-            stiffness = 220f
+            dampingRatio = 0.45f,
+            stiffness = 180f
         ),
         label = "jellyBarScaleY"
     )
 
     val pillScaleX by animateFloatAsState(
-        targetValue = if (isPressedOrDragging) 1.08f else 1.0f,
+        targetValue = if (isPressedOrDragging) 1.12f else 1.0f,
         animationSpec = spring(
-            dampingRatio = 0.55f,
-            stiffness = 240f
+            dampingRatio = 0.50f,
+            stiffness = 200f
         ),
         label = "pillScaleX"
     )
 
     val pillScaleY by animateFloatAsState(
-        targetValue = if (isPressedOrDragging) 0.90f else 1.0f,
+        targetValue = if (isPressedOrDragging) 0.86f else 1.0f,
         animationSpec = spring(
-            dampingRatio = 0.55f,
-            stiffness = 240f
+            dampingRatio = 0.50f,
+            stiffness = 200f
         ),
         label = "pillScaleY"
     )
@@ -136,8 +141,8 @@ fun InferraBottomBar(
     val animatedPillX by animateFloatAsState(
         targetValue = targetPillX,
         animationSpec = spring(
-            dampingRatio = 0.65f,
-            stiffness = 220f
+            dampingRatio = 0.55f,
+            stiffness = 180f
         ),
         label = "liquidPillX"
     )
@@ -151,135 +156,210 @@ fun InferraBottomBar(
             .windowInsetsPadding(WindowInsets.navigationBars)
             .padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
-        // Razor-sharp Elevated Surface Container (No Blur RenderEffect)
-        Surface(
+        // ------------------------------------------------------------------
+        // LAYER 1: Frosted Glass Backdrop Substrate (Blurs background content pass-through)
+        // ------------------------------------------------------------------
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .graphicsLayer {
+                    this.scaleX = barScaleX
+                    this.scaleY = barScaleY
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        renderEffect = RenderEffect
+                            .createBlurEffect(28f, 28f, Shader.TileMode.CLAMP)
+                            .asComposeRenderEffect()
+                    }
+                }
+                .clip(RoundedCornerShape(28.dp))
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
+                            MaterialTheme.colorScheme.surface.copy(alpha = 0.52f)
+                        )
+                    )
+                )
+                .border(
+                    BorderStroke(
+                        1.2.dp,
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0.55f),
+                                Color(0x3300E5FF),
+                                MaterialTheme.colorScheme.outline.copy(alpha = 0.20f),
+                                Color.White.copy(alpha = 0.15f)
+                            )
+                        )
+                    ),
+                    shape = RoundedCornerShape(28.dp)
+                )
+        )
+
+        // Specular Edge Reflection Line
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .graphicsLayer {
+                    this.scaleX = barScaleX
+                    this.scaleY = barScaleY
+                }
+                .clip(RoundedCornerShape(28.dp))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.5.dp)
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.White.copy(alpha = 0.45f),
+                                Color(0x6600E5FF),
+                                Color.White.copy(alpha = 0.45f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
+        }
+
+        // ------------------------------------------------------------------
+        // LAYER 2: Crisp Interactive Foreground (100% Razor Sharp Text, Icons & Pill)
+        // ------------------------------------------------------------------
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .graphicsLayer {
                     this.scaleX = barScaleX
                     this.scaleY = barScaleY
-                },
-            shape = RoundedCornerShape(26.dp),
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
-            tonalElevation = 8.dp
+                }
+                .padding(4.dp)
         ) {
+            // Inner Row Container for Exact Alignment & Pointer Gesture Handling
             Box(
-                modifier = Modifier.padding(4.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp)
+                    .onGloballyPositioned { innerRowWidthPx = it.size.width.toFloat().coerceAtLeast(1f) }
+                    .pointerInput(bottomNavItems.size) {
+                        awaitEachGesture {
+                            val down = awaitFirstDown(requireUnconsumed = false)
+                            val totalWidth = size.width.toFloat().coerceAtLeast(1f)
+                            val perItemWidth = totalWidth / bottomNavItems.size
+
+                            val calcIndex = { x: Float ->
+                                (x / perItemWidth).toInt().coerceIn(0, bottomNavItems.size - 1)
+                            }
+
+                            var currentIndex = calcIndex(down.position.x)
+                            hoveredIndex = currentIndex
+                            isPressedOrDragging = true
+
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val pointer = event.changes.firstOrNull { it.id == down.id }
+                                    ?: event.changes.firstOrNull()
+
+                                if (pointer == null || !pointer.pressed) {
+                                    // Release event!
+                                    if (hoveredIndex in bottomNavItems.indices) {
+                                        onNavigate(bottomNavItems[hoveredIndex].route)
+                                    }
+                                    break
+                                }
+
+                                val newIndex = calcIndex(pointer.position.x)
+                                if (newIndex != currentIndex) {
+                                    currentIndex = newIndex
+                                    hoveredIndex = newIndex
+                                }
+                            }
+
+                            isPressedOrDragging = false
+                            hoveredIndex = -1
+                        }
+                    }
             ) {
-                // Inner Row Container for Exact Alignment & Pointer Gesture Handling
+                // Sliding Liquid Glass Selection Pill - Razor Sharp & Centered
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .offset(x = animatedPillXDp)
+                        .width(itemWidthDp)
                         .height(54.dp)
-                        .onGloballyPositioned { innerRowWidthPx = it.size.width.toFloat().coerceAtLeast(1f) }
-                        .pointerInput(bottomNavItems.size) {
-                            awaitEachGesture {
-                                val down = awaitFirstDown(requireUnconsumed = false)
-                                val totalWidth = size.width.toFloat().coerceAtLeast(1f)
-                                val perItemWidth = totalWidth / bottomNavItems.size
-
-                                val calcIndex = { x: Float ->
-                                    (x / perItemWidth).toInt().coerceIn(0, bottomNavItems.size - 1)
-                                }
-
-                                var currentIndex = calcIndex(down.position.x)
-                                hoveredIndex = currentIndex
-                                isPressedOrDragging = true
-
-                                while (true) {
-                                    val event = awaitPointerEvent()
-                                    val pointer = event.changes.firstOrNull { it.id == down.id }
-                                        ?: event.changes.firstOrNull()
-
-                                    if (pointer == null || !pointer.pressed) {
-                                        // Release event!
-                                        if (hoveredIndex in bottomNavItems.indices) {
-                                            onNavigate(bottomNavItems[hoveredIndex].route)
-                                        }
-                                        break
-                                    }
-
-                                    val newIndex = calcIndex(pointer.position.x)
-                                    if (newIndex != currentIndex) {
-                                        currentIndex = newIndex
-                                        hoveredIndex = newIndex
-                                    }
-                                }
-
-                                isPressedOrDragging = false
-                                hoveredIndex = -1
-                            }
+                        .graphicsLayer {
+                            this.scaleX = pillScaleX
+                            this.scaleY = pillScaleY
                         }
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f),
+                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.60f)
+                                )
+                            )
+                        )
+                        .border(
+                            BorderStroke(
+                                1.dp,
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.60f),
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+                                    )
+                                )
+                            ),
+                            shape = RoundedCornerShape(22.dp)
+                        )
+                )
+
+                // Navigation Items Row - 100% Crisp High-Contrast Icons & Text
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Sliding Liquid Glass Selection Pill - Razor Sharp & Centered
-                    Box(
-                        modifier = Modifier
-                            .offset(x = animatedPillXDp)
-                            .width(itemWidthDp)
-                            .height(54.dp)
-                            .graphicsLayer {
-                                this.scaleX = pillScaleX
-                                this.scaleY = pillScaleY
-                            }
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f))
-                            .border(
-                                BorderStroke(
-                                    1.dp,
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.40f)
-                                ),
-                                shape = RoundedCornerShape(20.dp)
-                            )
-                    )
+                    bottomNavItems.forEachIndexed { index, item ->
+                        val isSelected = activeIndex == index
 
-                    // Navigation Items Row - Razor Sharp High-Contrast Icons & Text
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(54.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        bottomNavItems.forEachIndexed { index, item ->
-                            val isSelected = activeIndex == index
+                        val iconScale by animateFloatAsState(
+                            targetValue = if (isSelected) 1.22f else 0.92f,
+                            animationSpec = spring(
+                                dampingRatio = 0.50f,
+                                stiffness = 260f
+                            ),
+                            label = "iconScale"
+                        )
 
-                            val iconScale by animateFloatAsState(
-                                targetValue = if (isSelected) 1.15f else 0.92f,
-                                animationSpec = spring(
-                                    dampingRatio = 0.60f,
-                                    stiffness = 280f
-                                ),
-                                label = "iconScale"
-                            )
-
-                            Column(
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = item.icon,
+                                contentDescription = item.label,
+                                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight(),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Icon(
-                                    imageVector = item.icon,
-                                    contentDescription = item.label,
-                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier
-                                        .graphicsLayer {
-                                            this.scaleX = iconScale
-                                            this.scaleY = iconScale
-                                        }
-                                        .height(20.dp)
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = item.label,
-                                    fontSize = 10.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1
-                                )
-                            }
+                                    .graphicsLayer {
+                                        this.scaleX = iconScale
+                                        this.scaleY = iconScale
+                                    }
+                                    .height(20.dp)
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = item.label,
+                                fontSize = 10.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
+                            )
                         }
                     }
                 }
