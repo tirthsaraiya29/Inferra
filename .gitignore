@@ -45,3 +45,5 @@ Thumbs.db
 .env
 /database/data/
 /database/pycache/
+.vscode/
+.venv/
