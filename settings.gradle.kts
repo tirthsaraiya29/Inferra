@@ -20,7 +20,7 @@ buildscript {
             classpath("org.bouncycastle:bcpkix-jdk18on:1.86")
             classpath("org.apache.commons:commons-lang3:3.21.0")
             classpath("org.bitbucket.b_c:jose4j:0.9.7")
-            classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.20")
+            classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.20")
         }
     }
     configurations.all {
@@ -35,7 +35,7 @@ buildscript {
                 }
                 "org.apache.commons" -> if (requested.name == "commons-lang3") useVersion("3.21.0")
                 "org.bitbucket.b_c" -> if (requested.name == "jose4j") useVersion("0.9.7")
-                "org.jetbrains.kotlin" -> if (requested.name == "kotlin-gradle-plugin") useVersion("2.1.20")
+                "org.jetbrains.kotlin" -> if (requested.name == "kotlin-gradle-plugin") useVersion("2.4.20")
             }
         }
     }
