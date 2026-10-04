@@ -13,8 +13,8 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -44,7 +44,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -58,8 +57,6 @@ import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -157,10 +154,6 @@ fun InferraBottomBar(
         label = "pillScaleY"
     )
 
-    // Dynamic layout bounds mapping for item touch/drag gesture handling
-    val tabOffsets = remember { mutableStateMapOf<Int, Float>() }
-    val tabWidths = remember { mutableStateMapOf<Int, Float>() }
-
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -188,7 +181,7 @@ fun InferraBottomBar(
                     }
                     .shadow(elevation = 10.dp, shape = CircleShape, clip = false)
             ) {
-                // LAYER 1: Frosted Background Substrate with Internal Blur & Glass Refraction
+                // LAYER 1: Frosted Background Substrate with Internal Blur & Glass Refraction Sheen
                 Box(
                     modifier = Modifier
                         .matchParentSize()
@@ -196,27 +189,28 @@ fun InferraBottomBar(
                         .graphicsLayer {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                                 renderEffect = RenderEffect
-                                    .createBlurEffect(32f, 32f, Shader.TileMode.CLAMP)
+                                    .createBlurEffect(36f, 36f, Shader.TileMode.CLAMP)
                                     .asComposeRenderEffect()
                             }
                         }
                         .background(
                             Brush.verticalGradient(
                                 colors = listOf(
-                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.68f),
+                                    Color.White.copy(alpha = 0.22f),
+                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
                                     MaterialTheme.colorScheme.surface.copy(alpha = 0.48f)
                                 )
                             )
                         )
                         .border(
                             BorderStroke(
-                                1.2.dp,
+                                1.5.dp,
                                 Brush.verticalGradient(
                                     colors = listOf(
-                                        Color.White.copy(alpha = 0.55f),
-                                        Color(0x4400E5FF),
-                                        MaterialTheme.colorScheme.outline.copy(alpha = 0.20f),
-                                        Color.White.copy(alpha = 0.15f)
+                                        Color.White.copy(alpha = 0.75f),
+                                        Color(0x6600E5FF),
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.30f),
+                                        Color.White.copy(alpha = 0.20f)
                                     )
                                 )
                             ),
@@ -232,9 +226,9 @@ fun InferraBottomBar(
                                 Brush.horizontalGradient(
                                     colors = listOf(
                                         Color.Transparent,
-                                        Color.White.copy(alpha = 0.60f),
-                                        Color(0x8800E5FF),
-                                        Color.White.copy(alpha = 0.60f),
+                                        Color.White.copy(alpha = 0.80f),
+                                        Color(0xAA00E5FF),
+                                        Color.White.copy(alpha = 0.80f),
                                         Color.Transparent
                                     )
                                 )
@@ -242,55 +236,19 @@ fun InferraBottomBar(
                     )
                 }
 
-                // LAYER 2: Crisp Interactive Foreground with Slimy Jelly Gestures
+                // LAYER 2: Crisp Interactive Foreground with Direct Item Click Navigation & Slimy Jelly Gestures
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 6.dp, vertical = 5.dp)
-                        .pointerInput(mainNavItems.size) {
-                            awaitEachGesture {
-                                val down = awaitFirstDown(requireUnconsumed = false)
-                                val totalWidth = size.width.toFloat().coerceAtLeast(1f)
-
-                                val calcIndex = { x: Float ->
-                                    var foundIndex = -1
-                                    for (i in mainNavItems.indices) {
-                                        val startX = tabOffsets[i] ?: (i * (totalWidth / mainNavItems.size))
-                                        val width = tabWidths[i] ?: (totalWidth / mainNavItems.size)
-                                        if (x >= startX && x <= startX + width) {
-                                            foundIndex = i
-                                            break
-                                        }
-                                    }
-                                    if (foundIndex != -1) foundIndex else (x / (totalWidth / mainNavItems.size)).toInt().coerceIn(0, mainNavItems.size - 1)
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onPress = {
+                                    isPressedOrDragging = true
+                                    tryAwaitRelease()
+                                    isPressedOrDragging = false
                                 }
-
-                                var currentIndex = calcIndex(down.position.x)
-                                hoveredIndex = currentIndex
-                                isPressedOrDragging = true
-
-                                while (true) {
-                                    val event = awaitPointerEvent()
-                                    val pointer = event.changes.firstOrNull { it.id == down.id }
-                                        ?: event.changes.firstOrNull()
-
-                                    if (pointer == null || !pointer.pressed) {
-                                        if (hoveredIndex in mainNavItems.indices) {
-                                            onNavigate(mainNavItems[hoveredIndex].route)
-                                        }
-                                        break
-                                    }
-
-                                    val newIndex = calcIndex(pointer.position.x)
-                                    if (newIndex != currentIndex) {
-                                        currentIndex = newIndex
-                                        hoveredIndex = newIndex
-                                    }
-                                }
-
-                                isPressedOrDragging = false
-                                hoveredIndex = -1
-                            }
+                            )
                         },
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
@@ -310,10 +268,6 @@ fun InferraBottomBar(
                         Row(
                             modifier = Modifier
                                 .fillMaxHeight()
-                                .onGloballyPositioned { coords ->
-                                    tabOffsets[index] = coords.positionInParent().x
-                                    tabWidths[index] = coords.size.width.toFloat()
-                                }
                                 .graphicsLayer {
                                     if (isSelected) {
                                         this.scaleX = pillScaleX
@@ -327,19 +281,21 @@ fun InferraBottomBar(
                                             .background(
                                                 Brush.verticalGradient(
                                                     colors = listOf(
+                                                        Color.White.copy(alpha = 0.45f),
                                                         MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f),
-                                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.60f)
+                                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.50f)
                                                     )
                                                 ),
                                                 shape = CircleShape
                                             )
                                             .border(
                                                 BorderStroke(
-                                                    1.dp,
+                                                    1.2.dp,
                                                     Brush.verticalGradient(
                                                         colors = listOf(
-                                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.65f),
-                                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+                                                            Color.White.copy(alpha = 0.90f),
+                                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.60f),
+                                                            Color.White.copy(alpha = 0.30f)
                                                         )
                                                     )
                                                 ),
@@ -347,6 +303,9 @@ fun InferraBottomBar(
                                             )
                                     } else Modifier
                                 )
+                                .clickable {
+                                    onNavigate(item.route)
+                                }
                                 .padding(horizontal = if (isSelected) 14.dp else 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center
@@ -395,30 +354,13 @@ fun InferraBottomBar(
                         this.scaleY = barScaleY
                     }
                     .shadow(elevation = 10.dp, shape = CircleShape, clip = false)
-                    .pointerInput(Unit) {
-                        awaitEachGesture {
-                            val down = awaitFirstDown(requireUnconsumed = false)
-                            isPressedOrDragging = true
-                            hoveredIndex = 5
-
-                            while (true) {
-                                val event = awaitPointerEvent()
-                                val pointer = event.changes.firstOrNull { it.id == down.id }
-                                    ?: event.changes.firstOrNull()
-
-                                if (pointer == null || !pointer.pressed) {
-                                    onNavigate(searchNavItem.route)
-                                    break
-                                }
-                            }
-
-                            isPressedOrDragging = false
-                            hoveredIndex = -1
-                        }
+                    .clip(CircleShape)
+                    .clickable {
+                        onNavigate(searchNavItem.route)
                     },
                 contentAlignment = Alignment.Center
             ) {
-                // LAYER 1: Frosted Background Substrate with Internal Blur & Glass Refraction
+                // LAYER 1: Frosted Background Substrate with Internal Blur & Glass Refraction Sheen
                 Box(
                     modifier = Modifier
                         .matchParentSize()
@@ -426,27 +368,28 @@ fun InferraBottomBar(
                         .graphicsLayer {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                                 renderEffect = RenderEffect
-                                    .createBlurEffect(32f, 32f, Shader.TileMode.CLAMP)
+                                    .createBlurEffect(36f, 36f, Shader.TileMode.CLAMP)
                                     .asComposeRenderEffect()
                             }
                         }
                         .background(
                             Brush.verticalGradient(
                                 colors = listOf(
-                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.68f),
+                                    Color.White.copy(alpha = 0.22f),
+                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
                                     MaterialTheme.colorScheme.surface.copy(alpha = 0.48f)
                                 )
                             )
                         )
                         .border(
                             BorderStroke(
-                                1.2.dp,
+                                1.5.dp,
                                 Brush.verticalGradient(
                                     colors = listOf(
-                                        Color.White.copy(alpha = 0.55f),
-                                        Color(0x4400E5FF),
-                                        MaterialTheme.colorScheme.outline.copy(alpha = 0.20f),
-                                        Color.White.copy(alpha = 0.15f)
+                                        Color.White.copy(alpha = 0.75f),
+                                        Color(0x6600E5FF),
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.30f),
+                                        Color.White.copy(alpha = 0.20f)
                                     )
                                 )
                             ),
@@ -462,9 +405,9 @@ fun InferraBottomBar(
                                 Brush.horizontalGradient(
                                     colors = listOf(
                                         Color.Transparent,
-                                        Color.White.copy(alpha = 0.60f),
-                                        Color(0x8800E5FF),
-                                        Color.White.copy(alpha = 0.60f),
+                                        Color.White.copy(alpha = 0.80f),
+                                        Color(0xAA00E5FF),
+                                        Color.White.copy(alpha = 0.80f),
                                         Color.Transparent
                                     )
                                 )
@@ -486,18 +429,21 @@ fun InferraBottomBar(
                             .background(
                                 Brush.verticalGradient(
                                     colors = listOf(
+                                        Color.White.copy(alpha = 0.45f),
                                         MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f),
-                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.60f)
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.50f)
                                     )
-                                )
+                                ),
+                                shape = CircleShape
                             )
                             .border(
                                 BorderStroke(
-                                    1.dp,
+                                    1.2.dp,
                                     Brush.verticalGradient(
                                         colors = listOf(
-                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.65f),
-                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+                                            Color.White.copy(alpha = 0.90f),
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.60f),
+                                            Color.White.copy(alpha = 0.30f)
                                         )
                                     )
                                 ),

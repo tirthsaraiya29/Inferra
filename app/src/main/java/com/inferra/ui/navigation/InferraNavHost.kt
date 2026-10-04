@@ -265,11 +265,12 @@ fun InferraNavHost(
                     if (cleanCurrent != route) {
                         val startId = navController.graph.findStartDestination().id
                         if (route == Screen.Discovery.route) {
-                            navController.navigate(route) {
-                                popUpTo(startId) {
-                                    inclusive = false
+                            val popped = navController.popBackStack(startId, false)
+                            if (!popped) {
+                                navController.navigate(route) {
+                                    popUpTo(startId) { inclusive = false }
+                                    launchSingleTop = true
                                 }
-                                launchSingleTop = true
                             }
                         } else {
                             navController.navigate(route) {
