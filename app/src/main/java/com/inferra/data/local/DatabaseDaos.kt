@@ -186,6 +186,19 @@ interface DownloadJobDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertJob(job: DownloadJobEntity)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertJobSync(job: DownloadJobEntity)
+
+    @Query("UPDATE download_jobs SET downloadedBytes = :downloadedBytes, totalBytes = :totalBytes, speedBytesPerSec = :speedBytesPerSec, etaSeconds = :etaSeconds, statusStr = :statusStr WHERE id = :jobId")
+    fun updateProgressSync(
+        jobId: String,
+        downloadedBytes: Long,
+        totalBytes: Long,
+        speedBytesPerSec: Long,
+        etaSeconds: Long,
+        statusStr: String
+    )
+
     @Query("DELETE FROM download_jobs WHERE id = :jobId")
     suspend fun deleteJob(jobId: String)
 }
@@ -224,4 +237,19 @@ interface LocalModelDao {
 
     @Query("DELETE FROM local_models WHERE id = :id")
     suspend fun deleteLocalModel(id: String)
+}
+
+@Dao
+interface DatasetDao {
+    @Query("SELECT * FROM datasets ORDER BY downloadsCount DESC")
+    fun getAllDatasets(): Flow<List<DatasetEntity>>
+
+    @Query("SELECT * FROM datasets WHERE id = :id LIMIT 1")
+    suspend fun getDatasetById(id: String): DatasetEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDatasets(datasets: List<DatasetEntity>)
+
+    @Query("DELETE FROM datasets")
+    suspend fun clearAll()
 }

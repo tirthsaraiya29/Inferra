@@ -109,4 +109,14 @@ object HuggingFaceClient {
             .build()
             .create(HuggingFaceApi::class.java)
     }
+
+    val datasetApi: HuggingFaceDatasetApi by lazy {
+        val contentType = "application/json".toMediaType()
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory(contentType))
+            .build()
+            .create(HuggingFaceDatasetApi::class.java)
+    }
 }

@@ -23,8 +23,9 @@ import androidx.room.RoomDatabase
         HardwareProfileEntity::class,
         DeviceTargetEntity::class,
         LocalModelEntity::class,
+        DatasetEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -37,6 +38,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun hardwareProfileDao(): HardwareProfileDao
     abstract fun deviceTargetDao(): DeviceTargetDao
     abstract fun localModelDao(): LocalModelDao
+    abstract fun datasetDao(): DatasetDao
 
     companion object {
         private const val TAG = "AppDatabase"

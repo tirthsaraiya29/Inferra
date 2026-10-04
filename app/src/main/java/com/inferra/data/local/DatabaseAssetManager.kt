@@ -212,6 +212,27 @@ object DatabaseAssetManager {
                     db.execSQL("DROP TABLE android_models_wide;")
                     db.execSQL("ALTER TABLE android_models_wide_temp RENAME TO android_models_wide;")
 
+                    // Ensure datasets table exists with exact Room schema
+                    db.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS datasets (
+                            id TEXT NOT NULL PRIMARY KEY,
+                            name TEXT NOT NULL,
+                            author TEXT NOT NULL,
+                            description TEXT NOT NULL,
+                            downloadsCount INTEGER NOT NULL,
+                            likesCount INTEGER NOT NULL,
+                            updatedAt TEXT NOT NULL,
+                            totalSizeBytes INTEGER NOT NULL,
+                            license TEXT NOT NULL,
+                            rawJson TEXT NOT NULL
+                        )
+                        """.trimIndent()
+                    )
+
+                    // Clear stale Room master table so Room populates current identity hash cleanly
+                    db.execSQL("DROP TABLE IF EXISTS room_master_table;")
+
                     db.setTransactionSuccessful()
                 } finally {
                     db.endTransaction()

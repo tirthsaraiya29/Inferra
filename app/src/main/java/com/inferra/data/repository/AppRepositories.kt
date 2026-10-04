@@ -146,6 +146,7 @@ class DownloadRepository(
     }
 
     suspend fun createLocalDeviceDownloadJob(
+        context: Context,
         model: AiModel,
         quantization: QuantizationInfo
     ): DownloadJob = withContext(Dispatchers.IO) {
@@ -179,11 +180,51 @@ class DownloadRepository(
         )
 
         downloadJobDao.insertJob(job.toEntity())
+
+        // Enqueue WorkManager background worker
+        try {
+            val workData = androidx.work.workDataOf(
+                "JOB_ID" to jobId,
+                "DOWNLOAD_URL" to quantization.downloadUrl,
+                "FILE_NAME" to quantization.fileName,
+                "EXPECTED_SIZE" to quantization.fileSizeBytes,
+                "MODEL_ID" to model.id,
+                "MODEL_NAME" to model.name,
+                "QUANT_TYPE" to quantization.quantType
+            )
+            val request = androidx.work.OneTimeWorkRequestBuilder<com.inferra.data.download.ModelDownloadWorker>()
+                .setInputData(workData)
+                .build()
+            androidx.work.WorkManager.getInstance(context).enqueue(request)
+        } catch (e: Exception) {
+            android.util.Log.e("DownloadRepository", "Failed to enqueue WorkManager job: ${e.message}")
+        }
+
         job
+    }
+
+    suspend fun getJobById(jobId: String): DownloadJob? = withContext(Dispatchers.IO) {
+        val jobs = jobsFlow.first()
+        jobs.find { it.id == jobId }
     }
 
     suspend fun updateJobStatus(job: DownloadJob) = withContext(Dispatchers.IO) {
         downloadJobDao.insertJob(job.toEntity())
+    }
+
+    fun updateJobStatusSync(job: DownloadJob) {
+        downloadJobDao.insertJobSync(job.toEntity())
+    }
+
+    fun updateJobProgressSync(
+        jobId: String,
+        downloadedBytes: Long,
+        totalBytes: Long,
+        speedBytesPerSec: Long,
+        etaSeconds: Long,
+        statusStr: String
+    ) {
+        downloadJobDao.updateProgressSync(jobId, downloadedBytes, totalBytes, speedBytesPerSec, etaSeconds, statusStr)
     }
 
     suspend fun cancelJob(jobId: String) = withContext(Dispatchers.IO) {

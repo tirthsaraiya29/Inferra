@@ -16,6 +16,13 @@ sealed class Screen(val route: String) {
             return "model_detail?id=$encoded"
         }
     }
+    object Datasets : Screen("datasets")
+    object DatasetDetail : Screen("dataset_detail?id={id}") {
+        fun createRoute(datasetId: String): String {
+            val encoded = try { URLEncoder.encode(datasetId, "UTF-8") } catch (_: Exception) { datasetId }
+            return "dataset_detail?id=$encoded"
+        }
+    }
     object Compare : Screen("compare")
     object Hardware : Screen("hardware")
     object Downloads : Screen("downloads")

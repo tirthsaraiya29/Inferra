@@ -33,6 +33,7 @@ import androidx.navigation.navArgument
 import com.inferra.data.local.AppDatabase
 import com.inferra.data.network.HuggingFaceClient
 import com.inferra.data.repository.CompanionRepository
+import com.inferra.data.repository.DatasetRepository
 import com.inferra.data.repository.DownloadRepository
 import com.inferra.data.repository.HardwareRepository
 import com.inferra.data.repository.ModelRepository
@@ -40,6 +41,10 @@ import com.inferra.data.repository.ProviderRepository
 import com.inferra.data.repository.SettingsRepository
 import com.inferra.ui.screens.compare.CompareScreen
 import com.inferra.ui.screens.compare.CompareViewModel
+import com.inferra.ui.screens.datasets.DatasetDetailScreen
+import com.inferra.ui.screens.datasets.DatasetDetailViewModel
+import com.inferra.ui.screens.datasets.DatasetsScreen
+import com.inferra.ui.screens.datasets.DatasetsViewModel
 import com.inferra.ui.screens.detail.ModelDetailScreen
 import com.inferra.ui.screens.detail.ModelDetailViewModel
 import com.inferra.ui.screens.discovery.DiscoveryScreen
@@ -71,6 +76,13 @@ fun InferraNavHost(
             modelDao = db.modelDao(),
             androidModelDao = db.androidModelDao(),
             watchlistDao = db.watchlistDao(),
+            settingsRepository = settingsRepository
+        )
+    }
+    val datasetRepository = remember {
+        DatasetRepository(
+            api = HuggingFaceClient.datasetApi,
+            datasetDao = db.datasetDao(),
             settingsRepository = settingsRepository
         )
     }
@@ -107,6 +119,7 @@ fun InferraNavHost(
     // Shared ViewModels
     val discoveryViewModel = remember { DiscoveryViewModel(modelRepository) }
     val searchViewModel = remember { SearchViewModel(modelRepository, hardwareRepository) }
+    val datasetsViewModel = remember { DatasetsViewModel(datasetRepository) }
     val compareViewModel = remember { CompareViewModel(modelRepository) }
     val hardwareViewModel = remember { HardwareViewModel(hardwareRepository) }
     val downloadsViewModel = remember { DownloadsViewModel(downloadRepository, companionRepository, db.localModelDao()) }
@@ -116,7 +129,7 @@ fun InferraNavHost(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    val isDetailRoute = currentRoute?.startsWith("model_detail") == true
+    val isDetailRoute = (currentRoute?.startsWith("model_detail") == true) || (currentRoute?.startsWith("dataset_detail") == true)
 
     Box(modifier = Modifier.fillMaxSize()) {
         NavHost(
@@ -154,6 +167,34 @@ fun InferraNavHost(
                 SearchScreen(
                     viewModel = searchViewModel,
                     onNavigateToModel = { modelId -> navController.navigate(Screen.ModelDetail.createRoute(modelId)) }
+                )
+            }
+
+            composable(Screen.Datasets.route) {
+                DatasetsScreen(
+                    viewModel = datasetsViewModel,
+                    onNavigateToDataset = { datasetId -> navController.navigate(Screen.DatasetDetail.createRoute(datasetId)) }
+                )
+            }
+
+            composable(
+                route = "dataset_detail?id={id}",
+                arguments = listOf(navArgument("id") { type = NavType.StringType; defaultValue = "" })
+            ) { backStack ->
+                val rawDatasetId = backStack.arguments?.getString("id") ?: ""
+                val datasetId = try { URLDecoder.decode(rawDatasetId, "UTF-8") } catch (_: Exception) { rawDatasetId }
+
+                val detailViewModel = remember(datasetId) {
+                    DatasetDetailViewModel(
+                        datasetId = datasetId,
+                        datasetRepository = datasetRepository
+                    )
+                }
+
+                DatasetDetailScreen(
+                    viewModel = detailViewModel,
+                    onBackClick = { navController.popBackStack() },
+                    onLaunchUrl = launchUrl
                 )
             }
 

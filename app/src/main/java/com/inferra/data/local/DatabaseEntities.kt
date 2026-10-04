@@ -342,3 +342,17 @@ data class LocalModelEntity(
     val installedAtEpochMs: Long,
     val sha256Checksum: String? = null
 )
+
+@Entity(tableName = "datasets")
+data class DatasetEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    val author: String,
+    val description: String,
+    val downloadsCount: Long,
+    val likesCount: Long,
+    val updatedAt: String,
+    val totalSizeBytes: Long,
+    val license: String,
+    val rawJson: String
+)
