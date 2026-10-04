@@ -17,8 +17,7 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -32,12 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.inferra.ui.components.GlassCard
 import com.inferra.ui.components.GlassTextField
-import com.inferra.ui.components.LiquidGlassBackground
-import com.inferra.ui.theme.AccentAzure
-import com.inferra.ui.theme.FitExcellent
-import com.inferra.ui.theme.TextMuted
-import com.inferra.ui.theme.TextPrimary
-import com.inferra.ui.theme.TextSecondary
+import com.inferra.ui.components.InferraBackground
 
 @Composable
 fun SettingsScreen(
@@ -45,7 +39,7 @@ fun SettingsScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
 
-    LiquidGlassBackground {
+    InferraBackground {
         Column(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
@@ -53,22 +47,26 @@ fun SettingsScreen(
                     .padding(horizontal = 20.dp, vertical = 20.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(imageVector = Icons.Default.Settings, contentDescription = "Settings", tint = AccentAzure)
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Settings",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "Settings",
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = "App preferences and rendering controls",
+                    text = "App preferences and account authentication",
                     fontSize = 13.sp,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -77,47 +75,42 @@ fun SettingsScreen(
                 contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 110.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Section: Visual Material Engine
+                // Section: Visual Theme Mode
                 item {
                     GlassCard(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(20.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(imageVector = Icons.Default.Palette, contentDescription = "Glass", tint = AccentAzure)
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Text(text = "Glass Material Intensity", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                            }
-
-                            Spacer(modifier = Modifier.height(14.dp))
-
-                            Text(text = "Material Refraction Level", fontSize = 12.sp, color = TextSecondary)
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Slider(
-                                value = state.glassIntensity,
-                                onValueChange = viewModel::updateGlassIntensity,
-                                colors = SliderDefaults.colors(
-                                    thumbColor = AccentAzure,
-                                    activeTrackColor = AccentAzure,
-                                    inactiveTrackColor = TextMuted
-                                )
-                            )
-
-                            Spacer(modifier = Modifier.height(10.dp))
-
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column {
-                                    Text(text = "Editorial Dark Theme", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
-                                    Text(text = "Quiet high-contrast dark theme", fontSize = 12.sp, color = TextMuted)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Palette,
+                                        contentDescription = "Theme",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column {
+                                        Text(
+                                            text = "Editorial Dark Theme",
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = "High-contrast dark / light appearance",
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 }
                                 Switch(
                                     checked = state.isDarkMode,
                                     onCheckedChange = { viewModel.toggleDarkMode() },
                                     colors = SwitchDefaults.colors(
-                                        checkedThumbColor = AccentAzure,
-                                        checkedTrackColor = AccentAzure.copy(alpha = 0.3f)
+                                        checkedThumbColor = MaterialTheme.colorScheme.primary,
+                                        checkedTrackColor = MaterialTheme.colorScheme.primaryContainer
                                     )
                                 )
                             }
@@ -130,9 +123,18 @@ fun SettingsScreen(
                     GlassCard(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(20.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(imageVector = Icons.Default.Security, contentDescription = "Token", tint = AccentAzure)
+                                Icon(
+                                    imageVector = Icons.Default.Security,
+                                    contentDescription = "Token",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
                                 Spacer(modifier = Modifier.width(10.dp))
-                                Text(text = "Hugging Face Access Token", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                                Text(
+                                    text = "Hugging Face Access Token",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
                             }
 
                             Spacer(modifier = Modifier.height(6.dp))
@@ -140,7 +142,7 @@ fun SettingsScreen(
                             Text(
                                 text = "Enter your user access token (hf_...) to discover gated or private models like Llama 3.",
                                 fontSize = 12.sp,
-                                color = TextMuted
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
 
                             Spacer(modifier = Modifier.height(12.dp))
@@ -158,30 +160,42 @@ fun SettingsScreen(
                 item {
                     GlassCard(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(20.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(imageVector = Icons.Default.Security, contentDescription = "Privacy", tint = FitExcellent)
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Text(text = "Privacy & Diagnostics", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                            }
-
-                            Spacer(modifier = Modifier.height(12.dp))
-
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(text = "Anonymous speed estimation feedback", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
-                                    Text(text = "Contribute tokens/sec measurements to improve Inferra's hardware fit model.", fontSize = 11.sp, color = TextMuted)
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Security,
+                                        contentDescription = "Privacy",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column {
+                                        Text(
+                                            text = "Anonymous Diagnostics",
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = "Contribute tokens/sec benchmarks to improve hardware fit models.",
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 }
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Switch(
                                     checked = state.isTelemetryEnabled,
                                     onCheckedChange = { viewModel.toggleTelemetry() },
                                     colors = SwitchDefaults.colors(
-                                        checkedThumbColor = FitExcellent,
-                                        checkedTrackColor = FitExcellent.copy(alpha = 0.3f)
+                                        checkedThumbColor = MaterialTheme.colorScheme.primary,
+                                        checkedTrackColor = MaterialTheme.colorScheme.primaryContainer
                                     )
                                 )
                             }
@@ -194,9 +208,18 @@ fun SettingsScreen(
                     GlassCard(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(20.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(imageVector = Icons.Default.Info, contentDescription = "About", tint = AccentAzure)
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = "About",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
                                 Spacer(modifier = Modifier.width(10.dp))
-                                Text(text = "About Inferra", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                                Text(
+                                    text = "About Inferra",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
                             }
 
                             Spacer(modifier = Modifier.height(10.dp))
@@ -204,13 +227,13 @@ fun SettingsScreen(
                             Text(
                                 text = "Inferra v1.0.0",
                                 fontSize = 13.sp,
-                                color = TextSecondary
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "A quiet, intelligent application for discovering and understanding AI models.",
+                                text = "A quiet, intelligent platform for discovering, evaluating, and understanding AI models.",
                                 fontSize = 12.sp,
-                                color = TextMuted
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }

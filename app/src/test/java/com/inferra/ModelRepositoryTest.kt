@@ -6,7 +6,6 @@ import com.inferra.domain.model.LicenseType
 import com.inferra.domain.model.LineageInfo
 import com.inferra.domain.model.Modality
 import com.inferra.domain.model.ModelTask
-import com.inferra.domain.model.QualityEvidence
 import com.inferra.domain.model.QuantizationInfo
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -48,10 +47,7 @@ class ModelRepositoryTest {
                     sourceRepo = "bartowski/Qwen2.5-Coder-32B-Instruct-GGUF",
                     estimatedRamMb = 21000,
                     estimatedVramMb = 19500,
-                    relativeQualityScore = 94.5f,
-                    qualityEvidence = QualityEvidence(
-                        sourceRepo = "bartowski/Qwen2.5-Coder-32B-Instruct-GGUF"
-                    )
+                    relativeQualityScore = 94.5f
                 )
             ),
             capabilities = CapabilityMatrix(

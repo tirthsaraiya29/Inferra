@@ -3,8 +3,6 @@ package com.inferra.domain.model
 import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 
-
-
 @Serializable
 enum class Modality {
     TEXT, VISION, AUDIO, MULTIMODAL, CODE
@@ -43,11 +41,8 @@ data class QuantizationInfo(
     val sourceRepo: String = "",
     val estimatedRamMb: Int,
     val estimatedVramMb: Int,
-    val relativeQualityScore: Float, // 0.0 to 100.0
-    val qualityEvidence: QualityEvidence = QualityEvidence()
+    val relativeQualityScore: Float = 0f // 0.0 to 100.0
 )
-
-
 
 @Immutable
 @Serializable
