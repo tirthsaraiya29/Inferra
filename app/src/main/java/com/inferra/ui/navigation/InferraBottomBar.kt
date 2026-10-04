@@ -14,6 +14,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -44,7 +46,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,6 +60,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -81,13 +89,29 @@ fun InferraBottomBar(
     onNavigate: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val isSearchSelected = currentRoute == searchNavItem.route
+    var dragHoveredIndex by remember { mutableIntStateOf(-1) }
+    var isDragHolding by remember { mutableStateOf(false) }
+    var mainBarWidthPx by remember { mutableFloatStateOf(0f) }
 
-    val activeMainIndex = remember(currentRoute) {
+    val effectiveRoute = if (isDragHolding && dragHoveredIndex != -1) {
+        if (dragHoveredIndex in mainNavItems.indices) {
+            mainNavItems[dragHoveredIndex].route
+        } else if (dragHoveredIndex == 5) {
+            searchNavItem.route
+        } else {
+            currentRoute
+        }
+    } else {
+        currentRoute
+    }
+
+    val isSearchSelected = effectiveRoute == searchNavItem.route
+
+    val activeMainIndex = remember(effectiveRoute) {
         if (isSearchSelected) {
             -1
         } else {
-            val idx = mainNavItems.indexOfFirst { it.route == currentRoute }
+            val idx = mainNavItems.indexOfFirst { it.route == effectiveRoute }
             if (idx >= 0) idx else 0
         }
     }
@@ -103,7 +127,7 @@ fun InferraBottomBar(
     val itemPressedStates = itemInteractionSources.map { it.collectIsPressedAsState() }
     val isAnyItemPressed = itemPressedStates.any { it.value }
 
-    val isPressedOrDragging = isSearchPressed || isAnyItemPressed
+    val isPressedOrDragging = isDragHolding || isSearchPressed || isAnyItemPressed
 
     // ------------------------------------------------------------------
     // Slimy Jelly Scale Physics - Squish on Touch & Stretch on Move
@@ -162,11 +186,61 @@ fun InferraBottomBar(
             // ==================================================================
             // 1. MAIN FLOATING LIQUID GLASS CAPSULE BAR
             // Holds Discover, Datasets, Compare, Hardware, Downloads
+            // Supports Direct Tap AND Hold-Drag-Release Slimy Physics Screen Switching
             // ==================================================================
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
+                    .onGloballyPositioned { coordinates ->
+                        mainBarWidthPx = coordinates.size.width.toFloat()
+                    }
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            val down = awaitFirstDown(requireUnconsumed = false)
+                            isDragHolding = true
+                            var hasDragged = false
+                            val touchSlop = viewConfiguration.touchSlop
+
+                            if (mainBarWidthPx > 0f) {
+                                val itemWidth = mainBarWidthPx / mainNavItems.size.toFloat()
+                                val rawIdx = (down.position.x / itemWidth).toInt()
+                                dragHoveredIndex = rawIdx.coerceIn(0, mainNavItems.size - 1)
+                            }
+
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull { it.id == down.id } ?: break
+
+                                if (change.pressed) {
+                                    val dragDistance = (change.position - down.position).getDistance()
+                                    if (dragDistance > touchSlop) {
+                                        hasDragged = true
+                                    }
+                                    if (hasDragged && mainBarWidthPx > 0f) {
+                                        val itemWidth = mainBarWidthPx / mainNavItems.size.toFloat()
+                                        val rawIdx = (change.position.x / itemWidth).toInt()
+                                        dragHoveredIndex = if (rawIdx >= mainNavItems.size) 5 else rawIdx.coerceIn(0, mainNavItems.size - 1)
+                                        change.consume()
+                                    }
+                                } else {
+                                    // Pointer UP - Release gesture to change screen!
+                                    if (hasDragged && dragHoveredIndex != -1) {
+                                        val targetRoute = if (dragHoveredIndex in mainNavItems.indices) {
+                                            mainNavItems[dragHoveredIndex].route
+                                        } else {
+                                            searchNavItem.route
+                                        }
+                                        onNavigate(targetRoute)
+                                    }
+                                    break
+                                }
+                            }
+
+                            isDragHolding = false
+                            dragHoveredIndex = -1
+                        }
+                    }
                     .graphicsLayer {
                         this.scaleX = barScaleX
                         this.scaleY = barScaleY
