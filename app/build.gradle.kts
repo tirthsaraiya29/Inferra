@@ -38,6 +38,27 @@ android {
 }
 
 dependencies {
+    constraints {
+        implementation(libs.jdom2) {
+            because("Security fix for XXE issue in SAXBuilder (CVE workaround)")
+        }
+        implementation(libs.apache.httpclient) {
+            because("Security fix for malformed URI authority component parsing")
+        }
+        implementation(libs.bouncycastle.bcprov) {
+            because("Security fix for Name Constraints bypass and ASN.1 nesting depth reset")
+        }
+        implementation(libs.bouncycastle.bcpkix) {
+            because("Security fix for CompositeVerifier empty signature sequence")
+        }
+        implementation(libs.commons.lang3) {
+            because("Security fix for StackOverflowError in ClassUtils.getClass")
+        }
+        implementation(libs.jose4j) {
+            because("Security fix for DoS via malicious compressed JWE token")
+        }
+    }
+
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)

@@ -19,6 +19,11 @@ ksp = "2.1.20-1.0.31"
 materialIconsExtended = "1.7.8"
 work = "2.10.0"
 browser = "1.8.0"
+jdom2 = "2.0.6.1"
+httpclient = "4.5.13"
+bouncycastle = "1.85"
+commonsLang3 = "3.18.0"
+jose4j = "0.9.6"
 
 [libraries]
 androidx-browser = { group = "androidx.browser", name = "browser", version.ref = "browser" }
@@ -49,6 +54,12 @@ retrofit-kotlinx-serialization = { group = "com.squareup.retrofit2", name = "con
 okhttp-logging = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
+jdom2 = { group = "org.jdom", name = "jdom2", version.ref = "jdom2" }
+apache-httpclient = { group = "org.apache.httpcomponents", name = "httpclient", version.ref = "httpclient" }
+bouncycastle-bcprov = { group = "org.bouncycastle", name = "bcprov-jdk18on", version.ref = "bouncycastle" }
+bouncycastle-bcpkix = { group = "org.bouncycastle", name = "bcpkix-jdk18on", version.ref = "bouncycastle" }
+commons-lang3 = { group = "org.apache.commons", name = "commons-lang3", version.ref = "commonsLang3" }
+jose4j = { group = "org.bitbucket.b_c", name = "jose4j", version.ref = "jose4j" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

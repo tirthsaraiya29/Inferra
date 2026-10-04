@@ -1307,7 +1307,7 @@ class ProvenanceConflictEngine:
                             )
                             evidence_id = cursor.fetchone()[0]
 
-                            # 6. Result Insertion & Conflict Detection
+                            # 6. Result Insertion & Conflict Detection (Option A Consensus Patch)
                             existing_res = conn.execute(
                                 """
                                 SELECT id, numeric_value, normalized_value FROM results
@@ -1317,20 +1317,27 @@ class ProvenanceConflictEngine:
                             ).fetchall()
 
                             is_conflict = 0
-                            new_result_id = None
+                            diff_from_consensus = 0.0
+                            representative_id = None
 
                             if existing_res:
-                                # Check if score matches closely or diverges
-                                for prev_id, prev_num, prev_norm in existing_res:
-                                    diff = abs(prev_norm - candidate.normalized_value)
-                                    if diff > 0.05:  # Noticeable discrepancy
-                                        is_conflict = 1
-                                        conn.execute(
-                                            """
-                                            UPDATE results SET is_conflict = 1 WHERE id = ?
-                                        """,
-                                            (prev_id,),
-                                        )
+                                # Calculate running mean of existing normalized scores
+                                historical_scores = [r["normalized_value"] for r in existing_res]
+                                consensus_mean = sum(historical_scores) / len(historical_scores)
+                                diff_from_consensus = abs(consensus_mean - candidate.normalized_value)
+                                representative_id = existing_res[0]["id"]
+
+                                # Noticeable divergence (> 0.05 on normalized score)
+                                if diff_from_consensus > 0.05:
+                                    is_conflict = 1
+                                    # Mark prior matching results as conflicting
+                                    conn.execute(
+                                        """
+                                        UPDATE results SET is_conflict = 1 
+                                        WHERE model_id = ? AND benchmark_variant_id = ?
+                                    """,
+                                        (model_id, bv_id),
+                                    )
 
                             cursor = conn.execute(
                                 """
@@ -1363,23 +1370,23 @@ class ProvenanceConflictEngine:
                                 (new_result_id, evidence_id),
                             )
 
-                            if is_conflict and existing_res:
-                                for prev_id, _, prev_norm in existing_res:
-                                    conn.execute(
-                                        """
-                                        INSERT INTO conflicts (model_id, benchmark_variant_id, existing_result_id, conflicting_result_id,
-                                                               difference_magnitude, detected_at)
-                                        VALUES (?, ?, ?, ?, ?, ?)
-                                    """,
-                                        (
-                                            model_id,
-                                            bv_id,
-                                            prev_id,
-                                            new_result_id,
-                                            abs(prev_norm - candidate.normalized_value),
-                                            datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                                        ),
-                                    )
+                            # Log only a single divergence entry against consensus, eliminating O(N^2) conflict explosions
+                            if is_conflict and representative_id:
+                                conn.execute(
+                                    """
+                                    INSERT INTO conflicts (model_id, benchmark_variant_id, existing_result_id, conflicting_result_id,
+                                                           difference_magnitude, detected_at)
+                                    VALUES (?, ?, ?, ?, ?, ?)
+                                """,
+                                    (
+                                        model_id,
+                                        bv_id,
+                                        representative_id,
+                                        new_result_id,
+                                        diff_from_consensus,
+                                        datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                                    ),
+                                )
             finally:
                 conn.close()
 # =========================================================================
