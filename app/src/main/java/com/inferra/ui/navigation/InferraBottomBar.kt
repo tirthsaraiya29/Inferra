@@ -2,7 +2,6 @@ package com.inferra.ui.navigation
 
 import android.graphics.RenderEffect
 import android.graphics.Shader
-import android.os.Build
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
@@ -165,11 +164,9 @@ fun InferraBottomBar(
                 .graphicsLayer {
                     this.scaleX = barScaleX
                     this.scaleY = barScaleY
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        renderEffect = RenderEffect
-                            .createBlurEffect(28f, 28f, Shader.TileMode.CLAMP)
-                            .asComposeRenderEffect()
-                    }
+                    renderEffect = RenderEffect
+                        .createBlurEffect(28f, 28f, Shader.TileMode.CLAMP)
+                        .asComposeRenderEffect()
                 }
                 .clip(RoundedCornerShape(28.dp))
                 .background(
