@@ -21,9 +21,9 @@ work = "2.10.0"
 browser = "1.8.0"
 jdom2 = "2.0.6.1"
 httpclient = "4.5.13"
-bouncycastle = "1.85"
-commonsLang3 = "3.18.0"
-jose4j = "0.9.6"
+bouncycastle = "1.86"
+commonsLang3 = "3.21.0"
+jose4j = "0.9.7"
 
 [libraries]
 androidx-browser = { group = "androidx.browser", name = "browser", version.ref = "browser" }

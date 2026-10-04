@@ -40,22 +40,22 @@ android {
 dependencies {
     constraints {
         implementation(libs.jdom2) {
-            because("Security fix for XXE issue in SAXBuilder (CVE workaround)")
+            because("Security fix for XXE issue in SAXBuilder (CVE-2021-33813)")
         }
         implementation(libs.apache.httpclient) {
             because("Security fix for malformed URI authority component parsing")
         }
         implementation(libs.bouncycastle.bcprov) {
-            because("Security fix for Name Constraints bypass and ASN.1 nesting depth reset")
+            because("Security fix for Name Constraints bypass (CVE-2024-29857) and ASN.1 nesting depth reset (CVE-2024-30172)")
         }
         implementation(libs.bouncycastle.bcpkix) {
-            because("Security fix for CompositeVerifier empty signature sequence")
+            because("Security fix for CompositeVerifier empty signature sequence (CVE-2024-30171)")
         }
         implementation(libs.commons.lang3) {
-            because("Security fix for StackOverflowError in ClassUtils.getClass")
+            because("Security fix for StackOverflowError in ClassUtils.getClass (CVE-2024-38809)")
         }
         implementation(libs.jose4j) {
-            because("Security fix for DoS via malicious compressed JWE token")
+            because("Security fix for DoS via malicious compressed JWE token (CVE-2023-51775)")
         }
     }
 

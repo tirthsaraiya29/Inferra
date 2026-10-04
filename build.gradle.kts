@@ -14,11 +14,11 @@ subprojects {
                 "org.apache.httpcomponents" -> if (requested.name == "httpclient") useVersion("4.5.13")
                 "org.bouncycastle" -> {
                     if (requested.name.startsWith("bcprov-") || requested.name.startsWith("bcpkix-")) {
-                        useVersion("1.85")
+                        useVersion("1.86")
                     }
                 }
-                "org.apache.commons" -> if (requested.name == "commons-lang3") useVersion("3.18.0")
-                "org.bitbucket.b_c" -> if (requested.name == "jose4j") useVersion("0.9.6")
+                "org.apache.commons" -> if (requested.name == "commons-lang3") useVersion("3.21.0")
+                "org.bitbucket.b_c" -> if (requested.name == "jose4j") useVersion("0.9.7")
             }
         }
     }
