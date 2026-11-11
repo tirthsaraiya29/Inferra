@@ -30,7 +30,7 @@ object HardwareFitCalculator {
         val breakdown = MemoryEstimationEngine.estimate(
             model = model,
             quantization = quantization,
-            contextLengthTokens = model.contextLengthTokens.coerceAtMost(8192),
+            contextLengthTokens = model.contextLengthTokens,
         )
 
         val totalMemoryRequiredGb = breakdown.totalMemoryGb
@@ -83,12 +83,40 @@ object HardwareFitCalculator {
             }
         }
 
+        // Calculate performance throughput and TTFT metrics based on hardware profile and memory offloading
+        val gpuBandwidthGbps = when {
+            profile.vramGb >= 20f -> 950f
+            profile.vramGb >= 12f -> 504f
+            profile.vramGb > 0f -> 300f
+            else -> 0f
+        }
+        val ramBandwidthGbps = if (profile.isLocalDevice) 45f else 60f
+
+        val effectiveBandwidthGbps = if (availableVram > 0f) {
+            (gpuBandwidthGbps * (offloadPct / 100f)) + (ramBandwidthGbps * ((100 - offloadPct) / 100f))
+        } else {
+            ramBandwidthGbps
+        }
+
+        val estimatedTokensPerSec = if (fitGrade != FitGrade.INSUFFICIENT && weightsSizeGb > 0f) {
+            (effectiveBandwidthGbps / weightsSizeGb.coerceAtLeast(0.5f)).coerceIn(1.0f, 220.0f)
+        } else {
+            0f
+        }
+
+        val estimatedTtftMs = if (fitGrade != FitGrade.INSUFFICIENT && weightsSizeGb > 0f) {
+            val prefillMs = (512f * weightsSizeGb / (effectiveBandwidthGbps * 0.5f) * 1000f) + 45f
+            prefillMs.coerceIn(20f, 4000f)
+        } else {
+            0f
+        }
+
         return HardwareCompatibilityResult(
             fitGrade = fitGrade,
             requiredVramGb = if (fitGrade == FitGrade.EXCELLENT && availableVram > 0f) totalMemoryRequiredGb else availableVram,
             requiredRamGb = (totalMemoryRequiredGb - availableVram).coerceAtLeast(0f),
-            estimatedTokensPerSec = 0f,
-            estimatedTtftMs = 0f,
+            estimatedTokensPerSec = estimatedTokensPerSec,
+            estimatedTtftMs = estimatedTtftMs,
             offloadPercentage = offloadPct,
             explanation = explanation,
             profileName = profile.name,

@@ -10,7 +10,6 @@ import okhttp3.Response
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import java.util.concurrent.TimeUnit
-import javax.net.ssl.SSLPeerUnverifiedException
 
 object HuggingFaceClient {
     private const val TAG = "HuggingFaceApi"
@@ -68,34 +67,11 @@ object HuggingFaceClient {
         .add("*.huggingface.co", "sha256/++MBgDH5WGvL9Bcn5Be30cRcL0f5O+NyoXuWtQdX1aI=")
         .build()
 
-    private val unpinnedFallbackClient: OkHttpClient by lazy {
-        OkHttpClient.Builder()
-            .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(15, TimeUnit.SECONDS)
-            .addInterceptor(LoggingInterceptor())
-            .build()
-    }
-
-    private class ResilientPinningInterceptor(
-        private val fallbackClientProvider: () -> OkHttpClient
-    ) : Interceptor {
-        override fun intercept(chain: Interceptor.Chain): Response {
-            val request = chain.request()
-            return try {
-                chain.proceed(request)
-            } catch (e: SSLPeerUnverifiedException) {
-                safeLogE("SSL Certificate Pinning failed for ${request.url.host}. Falling back to system trust store validation...", e)
-                fallbackClientProvider().newCall(request).execute()
-            }
-        }
-    }
-
     val okHttpClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
             .certificatePinner(certificatePinner)
-            .addInterceptor(ResilientPinningInterceptor { unpinnedFallbackClient })
             .addInterceptor(LoggingInterceptor())
             .build()
     }

@@ -8,6 +8,7 @@ and provider pricing data for deployment in app/src/main/assets/.
 
 import sqlite3
 import os
+import re
 import datetime
 from pathlib import Path
 
@@ -238,7 +239,7 @@ def build_database():
 
     # 7. Build Wide-Column Table (android_models_wide)
     benchmark_ids = [b[0] for b in benchmarks]
-    col_defs = [f"{b_id} REAL" for b_id in benchmark_ids]
+    col_defs = [f'"{re.sub(r"[^a-zA-Z0-9_]", "", b_id)}" REAL' for b_id in benchmark_ids]
 
     wide_table_sql = f"""
     CREATE TABLE android_models_wide (
@@ -253,7 +254,11 @@ def build_database():
     """
     conn.execute(wide_table_sql)
 
-    select_cols = [f"MAX(CASE WHEN s.benchmark_id = '{b_id}' THEN ROUND(s.score, 2) END) AS {b_id}" for b_id in benchmark_ids]
+    select_cols = []
+    for b_id in benchmark_ids:
+        safe_id = re.sub(r'[^a-zA-Z0-9_]', '', b_id)
+        select_cols.append(f'MAX(CASE WHEN s.benchmark_id = \'{safe_id}\' THEN ROUND(s.score, 2) END) AS "{safe_id}"')
+
     populate_wide_sql = f"""
     INSERT INTO android_models_wide
     SELECT

@@ -61,7 +61,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     DatabaseAssetManager.DB_NAME
                 )
-                .fallbackToDestructiveMigration(dropAllTables = true)
+                .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = false)
                 .build()
             } catch (e: Exception) {
                 Log.e(TAG, "Error building Room database instance: ${e.message}. Attempting catalog rebuild...", e)
@@ -71,7 +71,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     DatabaseAssetManager.DB_NAME
                 )
-                .fallbackToDestructiveMigration(dropAllTables = true)
+                .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = false)
                 .build()
             }
         }

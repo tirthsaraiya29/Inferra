@@ -245,9 +245,29 @@ class RobustHttpClient:
                     backoff *= 2.0
         raise RuntimeError(f"Exhausted retries for {url}")
 
-    async def download_file(self, url: str, destination: Path, max_retries: int = 4) -> bool:
+    async def download_file(self, url: str, destination: Path, max_retries: int = 4, expected_size: Optional[int] = None) -> bool:
         if destination.exists() and destination.stat().st_size > 0:
-            return True
+            if expected_size is not None:
+                if destination.stat().st_size == expected_size:
+                    return True
+                else:
+                    logger.warning(f"Cached file size mismatch for {destination.name}: {destination.stat().st_size} vs expected {expected_size}. Redownloading...")
+                    destination.unlink()
+            else:
+                # Perform HEAD request to verify Content-Length header against pre-existing cached file
+                try:
+                    head_resp = await self.client.head(url)
+                    content_length = head_resp.headers.get("content-length")
+                    if content_length and content_length.isdigit():
+                        if destination.stat().st_size == int(content_length):
+                            return True
+                        else:
+                            logger.warning(f"Cached file size mismatch with server Content-Length for {destination.name}. Redownloading...")
+                            destination.unlink()
+                    else:
+                        return True
+                except Exception:
+                    return True
 
         async with self.semaphore:
             backoff = 1.0
@@ -260,13 +280,25 @@ class RobustHttpClient:
                             await asyncio.sleep(backoff)
                             backoff *= 2.0
                             continue
+                        content_len_hdr = response.headers.get("content-length")
+                        remote_expected = int(content_len_hdr) if content_len_hdr and content_len_hdr.isdigit() else expected_size
+
                         with open(destination, "wb") as f:
                             async for chunk in response.aiter_bytes(chunk_size=65536):
                                 f.write(chunk)
+
+                        if remote_expected is not None and destination.stat().st_size != remote_expected:
+                            logger.warning(f"Downloaded byte count mismatch for {url}: {destination.stat().st_size} vs expected {remote_expected}")
+                            if destination.exists():
+                                destination.unlink()
+                            return False
+
                     return True
                 except Exception as e:
                     if attempt == max_retries:
                         logger.warning(f"Download failed for {url}: {e}")
+                        if destination.exists():
+                            destination.unlink()
                         return False
                     await asyncio.sleep(backoff)
                     backoff *= 2.0
@@ -1092,7 +1124,7 @@ class ReleaseCompiler:
             ))
 
         # Build Wide-Column Table (Every single benchmark as an explicit column)
-        col_definitions = [f"{b.benchmark_id} REAL" for b in ALL_BENCHMARK_DEFINITIONS]
+        col_definitions = [f'"{re.sub(r"[^a-zA-Z0-9_]", "", b.benchmark_id)}" REAL' for b in ALL_BENCHMARK_DEFINITIONS]
         wide_schema_sql = f"""
         CREATE TABLE android_models_wide (
             model_id TEXT PRIMARY KEY REFERENCES android_models(id) ON DELETE CASCADE,
@@ -1106,8 +1138,12 @@ class ReleaseCompiler:
         """
         conn.execute(wide_schema_sql)
 
-        # Populate wide table
-        select_aggregates = [f"MAX(CASE WHEN s.benchmark_id = '{b.benchmark_id}' THEN ROUND(s.score, 2) END) AS {b.benchmark_id}" for b in ALL_BENCHMARK_DEFINITIONS]
+        # Populate wide table using sanitized column identifiers
+        select_aggregates = []
+        for b in ALL_BENCHMARK_DEFINITIONS:
+            safe_b_id = re.sub(r'[^a-zA-Z0-9_]', '', b.benchmark_id)
+            select_aggregates.append(f'MAX(CASE WHEN s.benchmark_id = \'{safe_b_id}\' THEN ROUND(s.score, 2) END) AS "{safe_b_id}"')
+
         populate_wide_sql = f"""
         INSERT INTO android_models_wide
         SELECT 

@@ -87,7 +87,7 @@ fun InferraNavHost(
         )
     }
     val hardwareRepository = remember { HardwareRepository(context, db.hardwareProfileDao()) }
-    val downloadRepository = remember { DownloadRepository(db.downloadJobDao()) }
+    val downloadRepository = remember { DownloadRepository(db.downloadJobDao(), context) }
     val companionRepository = remember { CompanionRepository(db.deviceTargetDao()) }
     val providerRepository = remember { ProviderRepository(db.providerDao()) }
 

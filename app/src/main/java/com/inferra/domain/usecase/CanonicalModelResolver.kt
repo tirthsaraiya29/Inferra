@@ -99,7 +99,7 @@ object CanonicalModelResolver {
                     variantType = ModelVariant.INSTRUCT,
                     name = name,
                     author = author,
-                    description = "Open-weights artificial intelligence model.",
+                    description = "Open-weights model (Metadata Inferred).",
                     totalParamsBillion = totalParams.coerceAtLeast(7.0f),
                     activeParamsBillion = totalParams.coerceAtLeast(7.0f),
                     isMoe = false,
@@ -108,7 +108,8 @@ object CanonicalModelResolver {
                     modalities = listOf(Modality.TEXT),
                     tasks = listOf(ModelTask.GENERAL_TEXT),
                     license = LicenseType.APACHE_2,
-                    licenseName = "Apache 2.0"
+                    licenseName = "Apache 2.0 (Inferred)",
+                    isInferred = true
                 )
             }
         }

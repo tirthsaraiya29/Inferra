@@ -92,6 +92,7 @@ data class AiModel(
     val isFeatured: Boolean = false,
     val isTrending: Boolean = false,
     val isNew: Boolean = false,
+    val isInferred: Boolean = false,
     val repoUrl: String,
     val avatarUrl: String? = null
 )

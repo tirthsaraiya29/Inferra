@@ -51,7 +51,7 @@ Downloading a 16 GB GGUF or EXL2 weight takes real bandwidth and time. Discoveri
 * **📦 Quantization Explorer**: Direct trade-off breakdown showing perplexity delta vs. memory footprint across Q4_K_M, Q5_K_S, Q8_0, and AWQ.
 * **🌳 Interactive Lineage & Provenance Tree**: Traces base models (e.g., Llama, Qwen, DeepSeek) through instruction tuning, chat alignments, quants, and community LoRAs.
 * **⚖️ Multi-Model Side-by-Side Comparison**: Compare up to 4 models on active parameters, MoE top-k activations, benchmark scores (MMLU-Pro, GSM8K, HumanEval), and licensing constraints.
-* **📡 Desktop Dispatcher**: Send verified Hugging Face download links directly to your desktop companion daemon with resumable multi-threaded downloads.
+* **📡 Desktop Dispatcher**: Pair desktop workstation companion nodes over local HTTP/HTTPS (port 8443) with live reachability testing and remote download dispatch.
 
 ---
 

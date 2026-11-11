@@ -30,6 +30,8 @@ class RealDownloadManager(private val context: Context) {
         url: String,
         targetFile: File,
         expectedSizeBytes: Long,
+        expectedSha256: String? = null,
+        isCancelled: () -> Boolean = { false },
         onProgress: (DownloadProgress) -> Unit
     ): Boolean = withContext(Dispatchers.IO) {
         try {
@@ -77,6 +79,15 @@ class RealDownloadManager(private val context: Context) {
             var bytesSinceLastCalc = 0L
 
             while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                if (isCancelled()) {
+                    Log.w(TAG, "Download cancelled via user UI. Aborting and purging incomplete file.")
+                    outputStream.flush()
+                    outputStream.close()
+                    inputStream.close()
+                    if (targetFile.exists()) targetFile.delete()
+                    return@withContext false
+                }
+
                 outputStream.write(buffer, 0, bytesRead)
                 bytesDownloaded += bytesRead
                 bytesSinceLastCalc += bytesRead
@@ -106,6 +117,22 @@ class RealDownloadManager(private val context: Context) {
             outputStream.close()
             inputStream.close()
 
+            // Verify completed download integrity
+            if (expectedSizeBytes > 0L && targetFile.length() != expectedSizeBytes) {
+                Log.e(TAG, "Integrity Check Failed: Expected size $expectedSizeBytes bytes but got ${targetFile.length()} bytes.")
+                if (targetFile.exists()) targetFile.delete()
+                return@withContext false
+            }
+
+            if (!expectedSha256.isNullOrBlank()) {
+                val actualSha256 = calculateSha256(targetFile)
+                if (!actualSha256.equals(expectedSha256, ignoreCase = true)) {
+                    Log.e(TAG, "Integrity Check Failed: Expected SHA-256 '$expectedSha256' but computed '$actualSha256'.")
+                    if (targetFile.exists()) targetFile.delete()
+                    return@withContext false
+                }
+            }
+
             onProgress(
                 DownloadProgress(
                     downloadedBytes = bytesDownloaded,
@@ -115,10 +142,13 @@ class RealDownloadManager(private val context: Context) {
                 )
             )
 
-            Log.i(TAG, "File downloaded successfully to ${targetFile.absolutePath} ($bytesDownloaded bytes)")
+            Log.i(TAG, "File downloaded and verified successfully to ${targetFile.absolutePath} ($bytesDownloaded bytes)")
             true
         } catch (e: Exception) {
             Log.e(TAG, "Error during streaming download from $url: ${e.message}", e)
+            if (targetFile.exists() && expectedSizeBytes > 0L && targetFile.length() != expectedSizeBytes) {
+                targetFile.delete()
+            }
             false
         }
     }

@@ -54,19 +54,31 @@ class CompanionRepository(
         ipAddress: String,
         port: Int = 8443
     ): DeviceTarget = withContext(Dispatchers.IO) {
+        val isOnline = checkDeviceReachability(ipAddress, port)
         val device = DeviceTarget(
             id = "target-${System.currentTimeMillis()}",
             name = name,
             ipAddress = ipAddress,
             port = port,
-            osName = "Companion Device",
-            isOnline = true,
+            osName = if (isOnline) "Companion Workstation" else "Unreachable Workstation",
+            isOnline = isOnline,
             lastSeenEpochMs = System.currentTimeMillis(),
             isPaired = true,
             supportedRuntimes = listOf("llama.cpp", "Ollama", "vLLM", "LM Studio")
         )
         deviceTargetDao.insertDevice(device.toEntity())
         device
+    }
+
+    suspend fun checkDeviceReachability(ipAddress: String, port: Int): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val socket = java.net.Socket()
+            socket.connect(java.net.InetSocketAddress(ipAddress, port), 2500)
+            socket.close()
+            true
+        } catch (_: Exception) {
+            false
+        }
     }
 
     private fun DeviceTargetEntity.toDomain() = DeviceTarget(
@@ -100,6 +112,7 @@ class CompanionRepository(
 
 class DownloadRepository(
     private val downloadJobDao: DownloadJobDao,
+    private val context: Context? = null
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -125,6 +138,14 @@ class DownloadRepository(
             createdAtEpochMs = System.currentTimeMillis()
         )
 
+        val dispatchSuccess = dispatchManifestToDevice(targetDevice, manifest)
+
+        val initialStatus = when {
+            dispatchSuccess -> DownloadStatus.DOWNLOADING
+            targetDevice.isOnline -> DownloadStatus.QUEUED
+            else -> DownloadStatus.WAITING_FOR_DEVICE
+        }
+
         val job = DownloadJob(
             id = jobId,
             modelId = model.id,
@@ -133,16 +154,37 @@ class DownloadRepository(
             quantType = quantization.quantType,
             totalBytes = quantization.fileSizeBytes,
             downloadedBytes = 0,
-            status = if (targetDevice.isOnline) DownloadStatus.QUEUED else DownloadStatus.WAITING_FOR_DEVICE,
+            status = initialStatus,
             targetDeviceId = targetDevice.id,
             targetDeviceName = targetDevice.name,
             speedBytesPerSec = 0,
             etaSeconds = 0,
+            errorMessage = if (!dispatchSuccess && !targetDevice.isOnline) "Device offline or unreachable at ${targetDevice.ipAddress}:${targetDevice.port}" else null,
             manifest = manifest
         )
 
         downloadJobDao.insertJob(job.toEntity())
         job
+    }
+
+    private suspend fun dispatchManifestToDevice(targetDevice: DeviceTarget, manifest: DownloadManifest): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val url = java.net.URL("http://${targetDevice.ipAddress}:${targetDevice.port}/api/download")
+            val conn = url.openConnection() as java.net.HttpURLConnection
+            conn.connectTimeout = 3000
+            conn.readTimeout = 3000
+            conn.requestMethod = "POST"
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.doOutput = true
+            val jsonPayload = json.encodeToString(manifest)
+            conn.outputStream.use { it.write(jsonPayload.toByteArray(Charsets.UTF_8)) }
+            val code = conn.responseCode
+            conn.disconnect()
+            code in 200..299
+        } catch (e: Exception) {
+            android.util.Log.d("DownloadRepository", "Remote dispatch failed: ${e.message}")
+            false
+        }
     }
 
     suspend fun createLocalDeviceDownloadJob(
@@ -181,19 +223,21 @@ class DownloadRepository(
 
         downloadJobDao.insertJob(job.toEntity())
 
-        // Enqueue WorkManager background worker
+        // Enqueue WorkManager background worker with tag for cancellation
         try {
             val workData = androidx.work.workDataOf(
                 "JOB_ID" to jobId,
                 "DOWNLOAD_URL" to quantization.downloadUrl,
                 "FILE_NAME" to quantization.fileName,
                 "EXPECTED_SIZE" to quantization.fileSizeBytes,
+                "EXPECTED_SHA256" to (quantization.sourceRepo.takeIf { it.startsWith("sha256:") } ?: ""),
                 "MODEL_ID" to model.id,
                 "MODEL_NAME" to model.name,
                 "QUANT_TYPE" to quantization.quantType
             )
             val request = androidx.work.OneTimeWorkRequestBuilder<com.inferra.data.download.ModelDownloadWorker>()
                 .setInputData(workData)
+                .addTag(jobId)
                 .build()
             androidx.work.WorkManager.getInstance(context).enqueue(request)
         } catch (e: Exception) {
@@ -229,6 +273,13 @@ class DownloadRepository(
 
     suspend fun cancelJob(jobId: String) = withContext(Dispatchers.IO) {
         downloadJobDao.deleteJob(jobId)
+        context?.let { ctx ->
+            try {
+                androidx.work.WorkManager.getInstance(ctx).cancelAllWorkByTag(jobId)
+            } catch (e: Exception) {
+                android.util.Log.e("DownloadRepository", "Failed to cancel WorkManager job '$jobId': ${e.message}")
+            }
+        }
     }
 
     private fun DownloadJobEntity.toDomain(): DownloadJob {

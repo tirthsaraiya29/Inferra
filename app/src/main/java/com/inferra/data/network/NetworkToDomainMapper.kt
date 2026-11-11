@@ -40,6 +40,8 @@ object NetworkToDomainMapper {
             likes = likes
         )
 
+        val isMetadataInferred = licenseName.contains("Inferred") || totalParams == 0f || contextLen == 0
+
         return AiModel(
             id = fullId,
             name = modelNameStr,
@@ -74,6 +76,7 @@ object NetworkToDomainMapper {
             isFeatured = (downloads > 500000) || (likes > 2000),
             isTrending = likes > 500,
             isNew = dto.createdAt?.contains("2025") == true || dto.createdAt?.contains("2026") == true,
+            isInferred = isMetadataInferred,
             repoUrl = "https://huggingface.co/$fullId",
             avatarUrl = null
         )
@@ -211,7 +214,7 @@ object NetworkToDomainMapper {
             return Pair(LicenseType.PERMISSIVE_OTHER, cardLic.uppercase(Locale.US))
         }
 
-        return Pair(LicenseType.PERMISSIVE_OTHER, "Not specified")
+        return Pair(LicenseType.PERMISSIVE_OTHER, "Not specified (Inferred)")
     }
 
     private fun extractQuantizations(

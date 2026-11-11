@@ -58,5 +58,6 @@ data class CanonicalModel(
     val license: LicenseType,
     val licenseName: String,
     val createdDate: String = "",
-    val updatedDate: String = ""
+    val updatedDate: String = "",
+    val isInferred: Boolean = false
 )

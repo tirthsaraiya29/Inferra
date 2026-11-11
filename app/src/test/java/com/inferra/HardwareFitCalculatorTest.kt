@@ -90,25 +90,27 @@ class HardwareFitCalculatorTest {
     )
 
     @Test
-    fun test32BModelFitsIn24GBVramWithQ4() {
-        val rtx4090 = HardwareProfile(
-            id = "test-4090",
-            name = "Test RTX 4090",
-            deviceType = DeviceType.DESKTOP_PC,
-            cpuName = "i9-14900K",
-            gpuName = "RTX 4090",
-            vramGb = 24.0f,
-            ramGb = 64.0f,
-            osName = "Windows 11",
+    fun test32BModelFitsIn32GBVramWithQ4() {
+        val rtx6000 = HardwareProfile(
+            id = "test-6000",
+            name = "Test RTX 6000 Ada",
+            deviceType = DeviceType.WORKSTATION_SERVER,
+            cpuName = "Threadripper PRO",
+            gpuName = "RTX 6000 Ada",
+            vramGb = 32.0f,
+            ramGb = 128.0f,
+            osName = "Ubuntu 24.04",
             preferredRuntime = "llama.cpp"
         )
 
         val quantQ4 = test32BModel.quantizations.first { it.quantType == "Q4_K_M" }
-        val result = HardwareFitCalculator.calculate(test32BModel, quantQ4, rtx4090)
+        val result = HardwareFitCalculator.calculate(test32BModel, quantQ4, rtx6000)
 
         assertEquals(FitGrade.EXCELLENT, result.fitGrade)
         assertEquals(100, result.offloadPercentage)
         assertNotNull(result.explanation)
+        org.junit.Assert.assertTrue(result.estimatedTokensPerSec > 0f)
+        org.junit.Assert.assertTrue(result.estimatedTtftMs > 0f)
     }
 
     @Test
@@ -130,5 +132,7 @@ class HardwareFitCalculatorTest {
 
         assertEquals(FitGrade.BORDERLINE, result.fitGrade)
         assertNotNull(result.explanation)
+        org.junit.Assert.assertTrue(result.estimatedTokensPerSec > 0f)
+        org.junit.Assert.assertTrue(result.estimatedTtftMs > 0f)
     }
 }

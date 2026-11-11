@@ -24,6 +24,7 @@ class ModelDownloadWorker(
         val url = inputData.getString("DOWNLOAD_URL") ?: return Result.failure()
         val fileName = inputData.getString("FILE_NAME") ?: "model.gguf"
         val expectedSize = inputData.getLong("EXPECTED_SIZE", 0L)
+        val expectedSha256 = inputData.getString("EXPECTED_SHA256")
         val modelId = inputData.getString("MODEL_ID") ?: "model"
         val modelName = inputData.getString("MODEL_NAME") ?: "Model"
         val quantType = inputData.getString("QUANT_TYPE") ?: "Q4_K_M"
@@ -31,7 +32,7 @@ class ModelDownloadWorker(
         Log.i(TAG, "Starting background download worker for job '$jobId' ($fileName)...")
 
         val db = AppDatabase.getDatabase(applicationContext)
-        val repo = DownloadRepository(db.downloadJobDao())
+        val repo = DownloadRepository(db.downloadJobDao(), applicationContext)
         val downloadManager = RealDownloadManager(applicationContext)
 
         val modelsDir = File(applicationContext.filesDir, "models")
@@ -41,7 +42,9 @@ class ModelDownloadWorker(
         val success = downloadManager.downloadFile(
             url = url,
             targetFile = targetFile,
-            expectedSizeBytes = expectedSize
+            expectedSizeBytes = expectedSize,
+            expectedSha256 = expectedSha256,
+            isCancelled = { isStopped || kotlinx.coroutines.runBlocking { repo.getJobById(jobId) == null } }
         ) { progress ->
             repo.updateJobProgressSync(
                 jobId = jobId,
@@ -53,7 +56,7 @@ class ModelDownloadWorker(
             )
         }
 
-        return if (success && targetFile.exists()) {
+        return if (success && targetFile.exists() && (expectedSize == 0L || targetFile.length() == expectedSize)) {
             val checksum = downloadManager.calculateSha256(targetFile)
 
             val localModel = LocalModelEntity(

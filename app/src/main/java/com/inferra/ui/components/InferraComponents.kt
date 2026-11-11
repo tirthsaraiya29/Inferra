@@ -497,11 +497,17 @@ fun ModelCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = charSpec,
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
-                    color = MaterialTheme.colorScheme.outline
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = charSpec,
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                    if (model.isInferred) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        GlassBadge(text = "Inferred", color = MaterialTheme.colorScheme.tertiary)
+                    }
+                }
 
                 if (compatibility != null) {
                     val (fitText, fitColor) = when (compatibility.fitGrade) {
