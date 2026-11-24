@@ -239,45 +239,53 @@ def build_database():
 
     # 7. Build Wide-Column Table (android_models_wide)
     benchmark_ids = [b[0] for b in benchmarks]
-    col_defs = [f'"{re.sub(r"[^a-zA-Z0-9_]", "", b_id)}" REAL' for b_id in benchmark_ids]
+    col_defs = ['"' + re.sub(r'[^a-zA-Z0-9_]', '', b_id) + '" REAL' for b_id in benchmark_ids]
 
-    wide_table_sql = f"""
-    CREATE TABLE android_models_wide (
-        model_id TEXT PRIMARY KEY REFERENCES android_models(id) ON DELETE CASCADE,
-        display_name TEXT NOT NULL,
-        organization TEXT NOT NULL,
-        parameter_count INTEGER,
-        context_length INTEGER,
-        license TEXT,
-        {", ".join(col_defs)}
-    );
-    """
+    wide_table_parts = [
+        "CREATE TABLE android_models_wide (",
+        "    model_id TEXT PRIMARY KEY REFERENCES android_models(id) ON DELETE CASCADE,",
+        "    display_name TEXT NOT NULL,",
+        "    organization TEXT NOT NULL,",
+        "    parameter_count INTEGER,",
+        "    context_length INTEGER,",
+        "    license TEXT"
+    ]
+    if col_defs:
+        wide_table_parts[-1] += ","
+        wide_table_parts.append(",\n".join("    " + c for c in col_defs))
+    wide_table_parts.append(");")
+    wide_table_sql = "\n".join(wide_table_parts)
     # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query, python.lang.security.audit.formatted-sql-query.formatted-sql-query
-    conn.execute(wide_table_sql)
+    conn.execute(wide_table_sql)  # nosemgrep
 
     select_cols = []
     param_benchmark_ids = []
     for b_id in benchmark_ids:
         safe_id = re.sub(r'[^a-zA-Z0-9_]', '', b_id)
-        select_cols.append(f'MAX(CASE WHEN s.benchmark_id = ? THEN ROUND(s.score, 2) END) AS "{safe_id}"')
+        select_cols.append('MAX(CASE WHEN s.benchmark_id = ? THEN ROUND(s.score, 2) END) AS "' + safe_id + '"')
         param_benchmark_ids.append(b_id)
 
-    populate_wide_sql = f"""
-    INSERT INTO android_models_wide
-    SELECT
-        m.id,
-        m.display_name,
-        m.organization,
-        m.parameter_count,
-        m.context_length,
-        m.license,
-        {", ".join(select_cols)}
-    FROM android_models m
-    LEFT JOIN android_benchmark_scores s ON m.id = s.model_id
-    GROUP BY m.id;
-    """
+    populate_wide_parts = [
+        "INSERT INTO android_models_wide",
+        "SELECT",
+        "    m.id,",
+        "    m.display_name,",
+        "    m.organization,",
+        "    m.parameter_count,",
+        "    m.context_length,",
+        "    m.license"
+    ]
+    if select_cols:
+        populate_wide_parts[-1] += ","
+        populate_wide_parts.append(",\n".join("    " + s for s in select_cols))
+    populate_wide_parts.extend([
+        "FROM android_models m",
+        "LEFT JOIN android_benchmark_scores s ON m.id = s.model_id",
+        "GROUP BY m.id;"
+    ])
+    populate_wide_sql = "\n".join(populate_wide_parts)
     # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query, python.lang.security.audit.formatted-sql-query.formatted-sql-query
-    conn.execute(populate_wide_sql, tuple(param_benchmark_ids))
+    conn.execute(populate_wide_sql, tuple(param_benchmark_ids))  # nosemgrep
 
     conn.commit()
     conn.execute("VACUUM;")

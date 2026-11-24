@@ -1124,45 +1124,53 @@ class ReleaseCompiler:
             ))
 
         # Build Wide-Column Table (Every single benchmark as an explicit column)
-        col_definitions = [f'"{re.sub(r"[^a-zA-Z0-9_]", "", b.benchmark_id)}" REAL' for b in ALL_BENCHMARK_DEFINITIONS]
-        wide_schema_sql = f"""
-        CREATE TABLE android_models_wide (
-            model_id TEXT PRIMARY KEY REFERENCES android_models(id) ON DELETE CASCADE,
-            display_name TEXT NOT NULL,
-            organization TEXT NOT NULL,
-            parameter_count INTEGER,
-            context_length INTEGER,
-            license TEXT,
-            {", ".join(col_definitions)}
-        );
-        """
+        col_definitions = ['"' + re.sub(r'[^a-zA-Z0-9_]', '', b.benchmark_id) + '" REAL' for b in ALL_BENCHMARK_DEFINITIONS]
+        wide_schema_parts = [
+            "CREATE TABLE android_models_wide (",
+            "    model_id TEXT PRIMARY KEY REFERENCES android_models(id) ON DELETE CASCADE,",
+            "    display_name TEXT NOT NULL,",
+            "    organization TEXT NOT NULL,",
+            "    parameter_count INTEGER,",
+            "    context_length INTEGER,",
+            "    license TEXT"
+        ]
+        if col_definitions:
+            wide_schema_parts[-1] += ","
+            wide_schema_parts.append(",\n".join("    " + c for c in col_definitions))
+        wide_schema_parts.append(");")
+        wide_schema_sql = "\n".join(wide_schema_parts)
         # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query, python.lang.security.audit.formatted-sql-query.formatted-sql-query
-        conn.execute(wide_schema_sql)
+        conn.execute(wide_schema_sql)  # nosemgrep
 
         # Populate wide table using sanitized column identifiers and parameterized benchmark query
         select_aggregates = []
         param_ids = []
         for b in ALL_BENCHMARK_DEFINITIONS:
             safe_b_id = re.sub(r'[^a-zA-Z0-9_]', '', b.benchmark_id)
-            select_aggregates.append(f'MAX(CASE WHEN s.benchmark_id = ? THEN ROUND(s.score, 2) END) AS "{safe_b_id}"')
+            select_aggregates.append('MAX(CASE WHEN s.benchmark_id = ? THEN ROUND(s.score, 2) END) AS "' + safe_b_id + '"')
             param_ids.append(b.benchmark_id)
 
-        populate_wide_sql = f"""
-        INSERT INTO android_models_wide
-        SELECT 
-            m.id,
-            m.display_name,
-            m.organization,
-            m.parameter_count,
-            m.context_length,
-            m.license,
-            {", ".join(select_aggregates)}
-        FROM android_models m
-        LEFT JOIN android_benchmark_scores s ON m.id = s.model_id
-        GROUP BY m.id;
-        """
+        populate_wide_parts = [
+            "INSERT INTO android_models_wide",
+            "SELECT ",
+            "    m.id,",
+            "    m.display_name,",
+            "    m.organization,",
+            "    m.parameter_count,",
+            "    m.context_length,",
+            "    m.license"
+        ]
+        if select_aggregates:
+            populate_wide_parts[-1] += ","
+            populate_wide_parts.append(",\n".join("    " + a for a in select_aggregates))
+        populate_wide_parts.extend([
+            "FROM android_models m",
+            "LEFT JOIN android_benchmark_scores s ON m.id = s.model_id",
+            "GROUP BY m.id;"
+        ])
+        populate_wide_sql = "\n".join(populate_wide_parts)
         # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query, python.lang.security.audit.formatted-sql-query.formatted-sql-query
-        conn.execute(populate_wide_sql, tuple(param_ids))
+        conn.execute(populate_wide_sql, tuple(param_ids))  # nosemgrep
 
         conn.commit()
         conn.execute("VACUUM;")

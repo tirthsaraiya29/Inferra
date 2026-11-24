@@ -31,9 +31,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-
           - language: java-kotlin
             build-mode: manual
+          - language: python
+            build-mode: none
 
     steps:
       - name: Checkout repository
@@ -46,13 +47,18 @@ jobs:
           java-version: "17"
           distribution: "temurin"
 
+      - name: Set up Python
+        if: matrix.language == 'python'
+        uses: actions/setup-python@39cd14951b08e74b059732155557623a5d60eadc # v5.4.0
+        with:
+          python-version: "3.11"
+
       - name: Initialize CodeQL
         uses: github/codeql-action/init@babb66191ecb9ed93766a2b8e390c58e805fec42 # v3.28.10
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
           queries: security-extended
-          dependency-caching: true
 
       - name: Run manual build steps
         if: matrix.build-mode == 'manual'
