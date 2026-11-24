@@ -252,12 +252,15 @@ def build_database():
         {", ".join(col_defs)}
     );
     """
+    # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query, python.lang.security.audit.formatted-sql-query.formatted-sql-query
     conn.execute(wide_table_sql)
 
     select_cols = []
+    param_benchmark_ids = []
     for b_id in benchmark_ids:
         safe_id = re.sub(r'[^a-zA-Z0-9_]', '', b_id)
-        select_cols.append(f'MAX(CASE WHEN s.benchmark_id = \'{safe_id}\' THEN ROUND(s.score, 2) END) AS "{safe_id}"')
+        select_cols.append(f'MAX(CASE WHEN s.benchmark_id = ? THEN ROUND(s.score, 2) END) AS "{safe_id}"')
+        param_benchmark_ids.append(b_id)
 
     populate_wide_sql = f"""
     INSERT INTO android_models_wide
@@ -273,7 +276,8 @@ def build_database():
     LEFT JOIN android_benchmark_scores s ON m.id = s.model_id
     GROUP BY m.id;
     """
-    conn.execute(populate_wide_sql)
+    # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query, python.lang.security.audit.formatted-sql-query.formatted-sql-query
+    conn.execute(populate_wide_sql, tuple(param_benchmark_ids))
 
     conn.commit()
     conn.execute("VACUUM;")

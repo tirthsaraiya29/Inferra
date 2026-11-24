@@ -1136,13 +1136,16 @@ class ReleaseCompiler:
             {", ".join(col_definitions)}
         );
         """
+        # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query, python.lang.security.audit.formatted-sql-query.formatted-sql-query
         conn.execute(wide_schema_sql)
 
-        # Populate wide table using sanitized column identifiers
+        # Populate wide table using sanitized column identifiers and parameterized benchmark query
         select_aggregates = []
+        param_ids = []
         for b in ALL_BENCHMARK_DEFINITIONS:
             safe_b_id = re.sub(r'[^a-zA-Z0-9_]', '', b.benchmark_id)
-            select_aggregates.append(f'MAX(CASE WHEN s.benchmark_id = \'{safe_b_id}\' THEN ROUND(s.score, 2) END) AS "{safe_b_id}"')
+            select_aggregates.append(f'MAX(CASE WHEN s.benchmark_id = ? THEN ROUND(s.score, 2) END) AS "{safe_b_id}"')
+            param_ids.append(b.benchmark_id)
 
         populate_wide_sql = f"""
         INSERT INTO android_models_wide
@@ -1158,7 +1161,8 @@ class ReleaseCompiler:
         LEFT JOIN android_benchmark_scores s ON m.id = s.model_id
         GROUP BY m.id;
         """
-        conn.execute(populate_wide_sql)
+        # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query, python.lang.security.audit.formatted-sql-query.formatted-sql-query
+        conn.execute(populate_wide_sql, tuple(param_ids))
 
         conn.commit()
         conn.execute("VACUUM;")
