@@ -17,12 +17,16 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Inferra">
+        <!-- Launcher MainActivity must be exported for OS launcher intent resolution -->
         <!-- nosemgrep: java.android.security.exported_activity.exported_activity -->
+        <!-- nosemgrep -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:theme="@style/Theme.Inferra"
             android:windowSoftInputMode="adjustResize">
+            <!-- nosemgrep: java.android.security.exported_activity.exported_activity -->
+            <!-- nosemgrep -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
