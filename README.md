@@ -254,3 +254,9 @@ We welcome contributions from mobile engineers, ML practitioners, and technical 
 ## 📄 License
 
 Inferra is distributed under the [Apache License 2.0](LICENSE).
+
+---
+
+## Website
+
+[Visit my website](https://tirthsaraiya.vercel.app)
