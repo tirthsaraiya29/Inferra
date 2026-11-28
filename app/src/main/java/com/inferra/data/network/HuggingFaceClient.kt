@@ -7,13 +7,22 @@ import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Response
+import okhttp3.ResponseBody
+import retrofit2.Converter
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
+import java.lang.reflect.Type
 import java.util.concurrent.TimeUnit
 
 object HuggingFaceClient {
     private const val TAG = "HuggingFaceApi"
     private const val BASE_URL = "https://huggingface.co/"
+
+    private var tokenProvider: (() -> String?)? = null
+
+    fun setTokenProvider(provider: () -> String?) {
+        tokenProvider = provider
+    }
 
     val json = Json {
         ignoreUnknownKeys = true
@@ -39,6 +48,20 @@ object HuggingFaceClient {
         }
     }
 
+    private class AuthInterceptor : Interceptor {
+        override fun intercept(chain: Interceptor.Chain): Response {
+            val original = chain.request()
+            val token = tokenProvider?.invoke()
+            val requestBuilder = original.newBuilder()
+
+            if (!token.isNullOrBlank() && original.header("Authorization") == null && original.url.host.contains("huggingface.co")) {
+                requestBuilder.header("Authorization", "Bearer ${token.trim()}")
+            }
+
+            return chain.proceed(requestBuilder.build())
+        }
+    }
+
     private class LoggingInterceptor : Interceptor {
         override fun intercept(chain: Interceptor.Chain): Response {
             val request = chain.request()
@@ -48,13 +71,26 @@ object HuggingFaceClient {
             return try {
                 val response = chain.proceed(request)
                 val duration = System.currentTimeMillis() - startTime
-                safeLogD("<-- RECEIVED RESPONSE (${response.code} ${response.message}) from ${request.url} in ${duration}ms [Headers: ${response.headers.size}]")
+                safeLogD("<-- RECEIVED RESPONSE (${response.code} ${response.message}) from ${request.url} in ${duration}ms")
                 response
             } catch (e: Exception) {
                 val duration = System.currentTimeMillis() - startTime
                 safeLogE("<-- REQUEST FAILED: ${request.url} after ${duration}ms: ${e.localizedMessage}", e)
                 throw e
             }
+        }
+    }
+
+    private object StringConverterFactory : Converter.Factory() {
+        override fun responseBodyConverter(
+            type: Type,
+            annotations: Array<out Annotation>,
+            retrofit: Retrofit
+        ): Converter<ResponseBody, *>? {
+            if (type == String::class.java) {
+                return Converter<ResponseBody, String> { body -> body.string() }
+            }
+            return null
         }
     }
 
@@ -72,6 +108,7 @@ object HuggingFaceClient {
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
             .certificatePinner(certificatePinner)
+            .addInterceptor(AuthInterceptor())
             .addInterceptor(LoggingInterceptor())
             .build()
     }
@@ -81,18 +118,9 @@ object HuggingFaceClient {
         Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(okHttpClient)
+            .addConverterFactory(StringConverterFactory)
             .addConverterFactory(json.asConverterFactory(contentType))
             .build()
             .create(HuggingFaceApi::class.java)
-    }
-
-    val datasetApi: HuggingFaceDatasetApi by lazy {
-        val contentType = "application/json".toMediaType()
-        Retrofit.Builder()
-            .baseUrl(BASE_URL)
-            .client(okHttpClient)
-            .addConverterFactory(json.asConverterFactory(contentType))
-            .build()
-            .create(HuggingFaceDatasetApi::class.java)
     }
 }

@@ -1,47 +1,29 @@
 package com.inferra.data.local
 
 import android.content.Context
-import android.util.Log
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
     entities = [
-        AndroidModelEntity::class,
-        AndroidArtifactEntity::class,
-        AndroidBenchmarkEntity::class,
-        AndroidBenchmarkScoreEntity::class,
-        AndroidProviderPricingEntity::class,
-        AndroidModelWideEntity::class,
-        ModelEntity::class,
-        ProviderEntity::class,
-        ProviderDeploymentEntity::class,
-        PricingRecordEntity::class,
-        WatchlistEntity::class,
+        CachedRepoEntity::class,
+        BookmarkEntity::class,
         DownloadJobEntity::class,
-        HardwareProfileEntity::class,
-        DeviceTargetEntity::class,
-        LocalModelEntity::class,
-        DatasetEntity::class,
+        LocalFileEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
 
-    abstract fun androidModelDao(): AndroidModelDao
-    abstract fun modelDao(): ModelDao
-    abstract fun providerDao(): ProviderDao
-    abstract fun watchlistDao(): WatchlistDao
+    abstract fun cachedRepoDao(): CachedRepoDao
+    abstract fun bookmarkDao(): BookmarkDao
     abstract fun downloadJobDao(): DownloadJobDao
-    abstract fun hardwareProfileDao(): HardwareProfileDao
-    abstract fun deviceTargetDao(): DeviceTargetDao
-    abstract fun localModelDao(): LocalModelDao
-    abstract fun datasetDao(): DatasetDao
+    abstract fun localFileDao(): LocalFileDao
 
     companion object {
-        private const val TAG = "AppDatabase"
+        private const val DB_NAME = "inferra_hub.db"
 
         @Volatile
         private var INSTANCE: AppDatabase? = null
@@ -53,27 +35,13 @@ abstract class AppDatabase : RoomDatabase() {
         }
 
         private fun buildDatabase(appContext: Context): AppDatabase {
-            DatabaseAssetManager.ensureDatabaseAssetCopied(appContext)
-
-            return try {
-                Room.databaseBuilder(
-                    appContext,
-                    AppDatabase::class.java,
-                    DatabaseAssetManager.DB_NAME
-                )
-                .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = false)
-                .build()
-            } catch (e: Exception) {
-                Log.e(TAG, "Error building Room database instance: ${e.message}. Attempting catalog rebuild...", e)
-                DatabaseAssetManager.rebuildCatalogCache(appContext)
-                Room.databaseBuilder(
-                    appContext,
-                    AppDatabase::class.java,
-                    DatabaseAssetManager.DB_NAME
-                )
-                .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = false)
-                .build()
-            }
+            return Room.databaseBuilder(
+                appContext,
+                AppDatabase::class.java,
+                DB_NAME
+            )
+            .fallbackToDestructiveMigration(dropAllTables = true)
+            .build()
         }
     }
 }

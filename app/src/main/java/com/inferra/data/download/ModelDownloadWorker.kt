@@ -5,7 +5,7 @@ import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.inferra.data.local.AppDatabase
-import com.inferra.data.local.LocalModelEntity
+import com.inferra.data.local.LocalFileEntity
 import com.inferra.data.repository.DownloadRepository
 import com.inferra.domain.model.DownloadStatus
 import java.io.File
@@ -22,12 +22,11 @@ class ModelDownloadWorker(
     override suspend fun doWork(): Result {
         val jobId = inputData.getString("JOB_ID") ?: return Result.failure()
         val url = inputData.getString("DOWNLOAD_URL") ?: return Result.failure()
-        val fileName = inputData.getString("FILE_NAME") ?: "model.gguf"
+        val fileName = inputData.getString("FILE_NAME") ?: "file.bin"
         val expectedSize = inputData.getLong("EXPECTED_SIZE", 0L)
         val expectedSha256 = inputData.getString("EXPECTED_SHA256")
-        val modelId = inputData.getString("MODEL_ID") ?: "model"
-        val modelName = inputData.getString("MODEL_NAME") ?: "Model"
-        val quantType = inputData.getString("QUANT_TYPE") ?: "Q4_K_M"
+        val repoId = inputData.getString("REPO_ID") ?: "repo"
+        val repoType = inputData.getString("REPO_TYPE") ?: "MODEL"
 
         Log.i(TAG, "Starting background download worker for job '$jobId' ($fileName)...")
 
@@ -35,9 +34,9 @@ class ModelDownloadWorker(
         val repo = DownloadRepository(db.downloadJobDao(), applicationContext)
         val downloadManager = RealDownloadManager(applicationContext)
 
-        val modelsDir = File(applicationContext.filesDir, "models")
-        if (!modelsDir.exists()) modelsDir.mkdirs()
-        val targetFile = File(modelsDir, fileName)
+        val downloadsDir = File(applicationContext.filesDir, "hf_downloads")
+        if (!downloadsDir.exists()) downloadsDir.mkdirs()
+        val targetFile = File(downloadsDir, fileName)
 
         val success = downloadManager.downloadFile(
             url = url,
@@ -59,24 +58,22 @@ class ModelDownloadWorker(
         return if (success && targetFile.exists() && (expectedSize == 0L || targetFile.length() == expectedSize)) {
             val checksum = downloadManager.calculateSha256(targetFile)
 
-            val localModel = LocalModelEntity(
+            val localFile = LocalFileEntity(
                 id = "local-${System.currentTimeMillis()}",
-                modelId = modelId,
-                modelName = modelName,
+                repoId = repoId,
+                repoTypeStr = repoType,
+                filePath = fileName,
                 fileName = fileName,
-                filePath = targetFile.absolutePath,
                 fileSizeBytes = targetFile.length(),
-                quantType = quantType,
-                format = "GGUF",
-                sourceRepo = modelId,
+                localPath = targetFile.absolutePath,
                 installedAtEpochMs = System.currentTimeMillis(),
                 sha256Checksum = checksum
             )
-            db.localModelDao().insertLocalModel(localModel)
+            db.localFileDao().insertLocalFile(localFile)
 
             val job = repo.getJobById(jobId)
             if (job != null) {
-                repo.updateJobStatus(job.copy(status = DownloadStatus.COMPLETED, downloadedBytes = targetFile.length()))
+                repo.updateJobStatus(job.copy(status = DownloadStatus.COMPLETED, downloadedBytes = targetFile.length(), localPath = targetFile.absolutePath))
             }
 
             Log.i(TAG, "Worker completed download job '$jobId' successfully")
@@ -84,7 +81,7 @@ class ModelDownloadWorker(
         } else {
             val job = repo.getJobById(jobId)
             if (job != null) {
-                repo.updateJobStatus(job.copy(status = DownloadStatus.FAILED, errorMessage = "Network or storage error"))
+                repo.updateJobStatus(job.copy(status = DownloadStatus.FAILED, errorMessage = "Network, hash verification, or storage error"))
             }
             Result.failure()
         }

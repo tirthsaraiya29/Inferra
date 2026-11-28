@@ -1,31 +1,36 @@
 package com.inferra.ui.navigation
 
+import com.inferra.domain.model.RepoType
 import java.net.URLEncoder
 
 sealed class Screen(val route: String) {
     object Discovery : Screen("discovery")
-    object Search : Screen("search") {
-        fun createRoute(query: String): String {
-            val encoded = try { URLEncoder.encode(query, "UTF-8") } catch (_: Exception) { query }
-            return "search?q=$encoded"
-        }
-    }
-    object ModelDetail : Screen("model_detail?id={id}") {
-        fun createRoute(modelId: String): String {
-            val encoded = try { URLEncoder.encode(modelId, "UTF-8") } catch (_: Exception) { modelId }
-            return "model_detail?id=$encoded"
-        }
-    }
+    object Models : Screen("models")
     object Datasets : Screen("datasets")
-    object DatasetDetail : Screen("dataset_detail?id={id}") {
-        fun createRoute(datasetId: String): String {
-            val encoded = try { URLEncoder.encode(datasetId, "UTF-8") } catch (_: Exception) { datasetId }
-            return "dataset_detail?id=$encoded"
+    object Spaces : Screen("spaces")
+
+    object Search : Screen("search?q={q}&type={type}") {
+        fun createRoute(query: String = "", type: RepoType = RepoType.MODEL): String {
+            val encodedQ = try { URLEncoder.encode(query, "UTF-8") } catch (_: Exception) { query }
+            return "search?q=$encodedQ&type=${type.name}"
         }
     }
-    object Compare : Screen("compare")
-    object Hardware : Screen("hardware")
+
+    object RepoDetail : Screen("repo_detail?id={id}&type={type}") {
+        fun createRoute(repoId: String, type: RepoType): String {
+            val encodedId = try { URLEncoder.encode(repoId, "UTF-8") } catch (_: Exception) { repoId }
+            return "repo_detail?id=$encodedId&type=${type.name}"
+        }
+    }
+
+    object UserProfile : Screen("profile?user={user}") {
+        fun createRoute(username: String): String {
+            val encodedUser = try { URLEncoder.encode(username, "UTF-8") } catch (_: Exception) { username }
+            return "profile?user=$encodedUser"
+        }
+    }
+
     object Downloads : Screen("downloads")
-    object Watchlist : Screen("watchlist")
-    object Settings : Screen("settings")
+    object Bookmarks : Screen("bookmarks")
+    object AccountSettings : Screen("account_settings")
 }

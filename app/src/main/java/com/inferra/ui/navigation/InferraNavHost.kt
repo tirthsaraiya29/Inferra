@@ -15,7 +15,6 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -32,33 +31,23 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.inferra.data.local.AppDatabase
 import com.inferra.data.network.HuggingFaceClient
-import com.inferra.data.repository.CompanionRepository
-import com.inferra.data.repository.DatasetRepository
 import com.inferra.data.repository.DownloadRepository
-import com.inferra.data.repository.HardwareRepository
-import com.inferra.data.repository.ModelRepository
-import com.inferra.data.repository.ProviderRepository
+import com.inferra.data.repository.HubRepository
 import com.inferra.data.repository.SettingsRepository
-import com.inferra.ui.screens.compare.CompareScreen
-import com.inferra.ui.screens.compare.CompareViewModel
-import com.inferra.ui.screens.datasets.DatasetDetailScreen
-import com.inferra.ui.screens.datasets.DatasetDetailViewModel
-import com.inferra.ui.screens.datasets.DatasetsScreen
-import com.inferra.ui.screens.datasets.DatasetsViewModel
-import com.inferra.ui.screens.detail.ModelDetailScreen
-import com.inferra.ui.screens.detail.ModelDetailViewModel
+import com.inferra.domain.model.RepoType
+import com.inferra.ui.screens.account.AccountSettingsScreen
+import com.inferra.ui.screens.account.AccountSettingsViewModel
+import com.inferra.ui.screens.bookmarks.BookmarksScreen
+import com.inferra.ui.screens.bookmarks.BookmarksViewModel
+import com.inferra.ui.screens.detail.RepoDetailScreen
+import com.inferra.ui.screens.detail.RepoDetailViewModel
 import com.inferra.ui.screens.discovery.DiscoveryScreen
 import com.inferra.ui.screens.discovery.DiscoveryViewModel
 import com.inferra.ui.screens.downloads.DownloadsScreen
 import com.inferra.ui.screens.downloads.DownloadsViewModel
-import com.inferra.ui.screens.hardware.HardwareScreen
-import com.inferra.ui.screens.hardware.HardwareViewModel
+import com.inferra.ui.screens.repo.RepoListScreen
 import com.inferra.ui.screens.search.SearchScreen
 import com.inferra.ui.screens.search.SearchViewModel
-import com.inferra.ui.screens.settings.SettingsScreen
-import com.inferra.ui.screens.settings.SettingsViewModel
-import com.inferra.ui.screens.watchlist.WatchlistScreen
-import com.inferra.ui.screens.watchlist.WatchlistViewModel
 import java.net.URLDecoder
 
 @Composable
@@ -70,26 +59,15 @@ fun InferraNavHost(
 
     // Repositories
     val settingsRepository = remember { SettingsRepository(context) }
-    val modelRepository = remember {
-        ModelRepository(
+    val hubRepository = remember {
+        HubRepository(
             api = HuggingFaceClient.api,
-            modelDao = db.modelDao(),
-            androidModelDao = db.androidModelDao(),
-            watchlistDao = db.watchlistDao(),
-            settingsRepository = settingsRepository
+            cachedRepoDao = db.cachedRepoDao(),
+            bookmarkDao = db.bookmarkDao(),
+            context = context
         )
     }
-    val datasetRepository = remember {
-        DatasetRepository(
-            api = HuggingFaceClient.datasetApi,
-            datasetDao = db.datasetDao(),
-            settingsRepository = settingsRepository
-        )
-    }
-    val hardwareRepository = remember { HardwareRepository(context, db.hardwareProfileDao()) }
     val downloadRepository = remember { DownloadRepository(db.downloadJobDao(), context) }
-    val companionRepository = remember { CompanionRepository(db.deviceTargetDao()) }
-    val providerRepository = remember { ProviderRepository(db.providerDao()) }
 
     val launchUrl: (String) -> Unit = remember(context) {
         { url ->
@@ -111,25 +89,17 @@ fun InferraNavHost(
         }
     }
 
-    // Seed default providers on launch
-    LaunchedEffect(Unit) {
-        providerRepository.seedDefaultProviders()
-    }
-
     // Shared ViewModels
-    val discoveryViewModel = remember { DiscoveryViewModel(modelRepository) }
-    val searchViewModel = remember { SearchViewModel(modelRepository, hardwareRepository) }
-    val datasetsViewModel = remember { DatasetsViewModel(datasetRepository) }
-    val compareViewModel = remember { CompareViewModel(modelRepository) }
-    val hardwareViewModel = remember { HardwareViewModel(hardwareRepository) }
-    val downloadsViewModel = remember { DownloadsViewModel(downloadRepository, companionRepository, db.localModelDao()) }
-    val watchlistViewModel = remember { WatchlistViewModel(modelRepository, hardwareRepository) }
-    val settingsViewModel = remember { SettingsViewModel(settingsRepository) }
+    val discoveryViewModel = remember { DiscoveryViewModel(hubRepository) }
+    val searchViewModel = remember { SearchViewModel(hubRepository) }
+    val downloadsViewModel = remember { DownloadsViewModel(downloadRepository) }
+    val bookmarksViewModel = remember { BookmarksViewModel(hubRepository) }
+    val accountSettingsViewModel = remember { AccountSettingsViewModel(hubRepository, settingsRepository) }
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    val isDetailRoute = (currentRoute?.startsWith("model_detail") == true) || (currentRoute?.startsWith("dataset_detail") == true)
+    val isDetailRoute = currentRoute?.startsWith("repo_detail") == true
 
     Box(modifier = Modifier.fillMaxSize()) {
         NavHost(
@@ -144,91 +114,94 @@ fun InferraNavHost(
             composable(Screen.Discovery.route) {
                 DiscoveryScreen(
                     viewModel = discoveryViewModel,
-                    onNavigateToModel = { modelId -> navController.navigate(Screen.ModelDetail.createRoute(modelId)) },
-                    onNavigateToSearch = { query -> navController.navigate(Screen.Search.createRoute(query)) },
-                    onNavigateToHardware = { navController.navigate(Screen.Hardware.route) },
+                    onNavigateToRepo = { repoId, type -> navController.navigate(Screen.RepoDetail.createRoute(repoId, type)) },
+                    onNavigateToSearch = { query, type -> navController.navigate(Screen.Search.createRoute(query, type)) },
+                    onNavigateToType = { type ->
+                        when (type) {
+                            RepoType.MODEL -> navController.navigate(Screen.Models.route)
+                            RepoType.DATASET -> navController.navigate(Screen.Datasets.route)
+                            RepoType.SPACE -> navController.navigate(Screen.Spaces.route)
+                        }
+                    }
+                )
+            }
+
+            composable(Screen.Models.route) {
+                RepoListScreen(
+                    repoType = RepoType.MODEL,
+                    viewModel = searchViewModel,
+                    onNavigateToRepo = { repoId, type -> navController.navigate(Screen.RepoDetail.createRoute(repoId, type)) }
+                )
+            }
+
+            composable(Screen.Datasets.route) {
+                RepoListScreen(
+                    repoType = RepoType.DATASET,
+                    viewModel = searchViewModel,
+                    onNavigateToRepo = { repoId, type -> navController.navigate(Screen.RepoDetail.createRoute(repoId, type)) }
+                )
+            }
+
+            composable(Screen.Spaces.route) {
+                RepoListScreen(
+                    repoType = RepoType.SPACE,
+                    viewModel = searchViewModel,
+                    onNavigateToRepo = { repoId, type -> navController.navigate(Screen.RepoDetail.createRoute(repoId, type)) }
                 )
             }
 
             composable(
-                route = "search?q={q}",
-                arguments = listOf(navArgument("q") { type = NavType.StringType; defaultValue = "" })
+                route = "search?q={q}&type={type}",
+                arguments = listOf(
+                    navArgument("q") { type = NavType.StringType; defaultValue = "" },
+                    navArgument("type") { type = NavType.StringType; defaultValue = "MODEL" }
+                )
             ) { backStack ->
                 val rawQuery = backStack.arguments?.getString("q") ?: ""
+                val rawType = backStack.arguments?.getString("type") ?: "MODEL"
                 val query = try { URLDecoder.decode(rawQuery, "UTF-8") } catch (_: Exception) { rawQuery }
+                val repoType = try { RepoType.valueOf(rawType) } catch (_: Exception) { RepoType.MODEL }
+
                 SearchScreen(
                     viewModel = searchViewModel,
                     initialQuery = query,
-                    onNavigateToModel = { modelId -> navController.navigate(Screen.ModelDetail.createRoute(modelId)) }
+                    initialType = repoType,
+                    onNavigateToRepo = { repoId, type -> navController.navigate(Screen.RepoDetail.createRoute(repoId, type)) }
                 )
             }
 
             composable(Screen.Search.route) {
                 SearchScreen(
                     viewModel = searchViewModel,
-                    onNavigateToModel = { modelId -> navController.navigate(Screen.ModelDetail.createRoute(modelId)) }
-                )
-            }
-
-            composable(Screen.Datasets.route) {
-                DatasetsScreen(
-                    viewModel = datasetsViewModel,
-                    onNavigateToDataset = { datasetId -> navController.navigate(Screen.DatasetDetail.createRoute(datasetId)) }
+                    onNavigateToRepo = { repoId, type -> navController.navigate(Screen.RepoDetail.createRoute(repoId, type)) }
                 )
             }
 
             composable(
-                route = "dataset_detail?id={id}",
-                arguments = listOf(navArgument("id") { type = NavType.StringType; defaultValue = "" })
+                route = "repo_detail?id={id}&type={type}",
+                arguments = listOf(
+                    navArgument("id") { type = NavType.StringType; defaultValue = "" },
+                    navArgument("type") { type = NavType.StringType; defaultValue = "MODEL" }
+                )
             ) { backStack ->
-                val rawDatasetId = backStack.arguments?.getString("id") ?: ""
-                val datasetId = try { URLDecoder.decode(rawDatasetId, "UTF-8") } catch (_: Exception) { rawDatasetId }
+                val rawRepoId = backStack.arguments?.getString("id") ?: ""
+                val rawType = backStack.arguments?.getString("type") ?: "MODEL"
+                val repoId = try { URLDecoder.decode(rawRepoId, "UTF-8") } catch (_: Exception) { rawRepoId }
+                val repoType = try { RepoType.valueOf(rawType) } catch (_: Exception) { RepoType.MODEL }
 
-                val detailViewModel = remember(datasetId) {
-                    DatasetDetailViewModel(
-                        datasetId = datasetId,
-                        datasetRepository = datasetRepository
+                val detailViewModel = remember(repoId, repoType) {
+                    RepoDetailViewModel(
+                        repoId = repoId,
+                        repoType = repoType,
+                        hubRepository = hubRepository,
+                        downloadRepository = downloadRepository
                     )
                 }
 
-                DatasetDetailScreen(
+                RepoDetailScreen(
                     viewModel = detailViewModel,
                     onBackClick = { navController.popBackStack() },
                     onLaunchUrl = launchUrl
-                )
-            }
-
-            composable(
-                route = "model_detail?id={id}",
-                arguments = listOf(navArgument("id") { type = NavType.StringType; defaultValue = "" })
-            ) { backStack ->
-                val rawModelId = backStack.arguments?.getString("id") ?: ""
-                val modelId = try { URLDecoder.decode(rawModelId, "UTF-8") } catch (_: Exception) { rawModelId }
-
-                val detailViewModel = remember(modelId) {
-                    ModelDetailViewModel(
-                        modelId = modelId,
-                        modelRepository = modelRepository
-                    )
-                }
-
-                ModelDetailScreen(
-                    viewModel = detailViewModel,
-                    onBackClick = { navController.popBackStack() },
-                    onLaunchUrl = launchUrl
-                )
-            }
-
-            composable(Screen.Compare.route) {
-                CompareScreen(
-                    viewModel = compareViewModel,
-                    onNavigateToModel = { modelId -> navController.navigate(Screen.ModelDetail.createRoute(modelId)) }
-                )
-            }
-
-            composable(Screen.Hardware.route) {
-                HardwareScreen(
-                    viewModel = hardwareViewModel
                 )
             }
 
@@ -238,16 +211,16 @@ fun InferraNavHost(
                 )
             }
 
-            composable(Screen.Watchlist.route) {
-                WatchlistScreen(
-                    viewModel = watchlistViewModel,
-                    onNavigateToModel = { modelId -> navController.navigate(Screen.ModelDetail.createRoute(modelId)) }
+            composable(Screen.Bookmarks.route) {
+                BookmarksScreen(
+                    viewModel = bookmarksViewModel,
+                    onNavigateToRepo = { repoId, type -> navController.navigate(Screen.RepoDetail.createRoute(repoId, type)) }
                 )
             }
 
-            composable(Screen.Settings.route) {
-                SettingsScreen(
-                    viewModel = settingsViewModel
+            composable(Screen.AccountSettings.route) {
+                AccountSettingsScreen(
+                    viewModel = accountSettingsViewModel
                 )
             }
         }

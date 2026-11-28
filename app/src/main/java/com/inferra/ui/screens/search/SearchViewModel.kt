@@ -2,40 +2,31 @@ package com.inferra.ui.screens.search
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.inferra.data.repository.HardwareRepository
-import com.inferra.data.repository.ModelRepository
-import com.inferra.domain.model.AiModel
-import com.inferra.domain.model.HardwareCompatibilityResult
-import com.inferra.domain.model.HardwareProfile
-import com.inferra.domain.model.ModelTask
-import com.inferra.domain.usecase.HardwareFitCalculator
+import com.inferra.data.repository.HubRepository
+import com.inferra.domain.model.RepoItem
+import com.inferra.domain.model.RepoType
+import com.inferra.domain.model.UiState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlin.time.Duration.Companion.milliseconds
 
 data class SearchUiState(
     val query: String = "",
-    val isLoading: Boolean = false,
-    val isLoadingMore: Boolean = false,
-    val currentPage: Int = 0,
+    val selectedType: RepoType = RepoType.MODEL,
+    val selectedSort: String = "downloads",
+    val pipelineTagFilter: String? = null,
+    val results: List<RepoItem> = emptyList(),
+    val page: Int = 1,
     val canLoadMore: Boolean = true,
-    val searchResults: List<AiModel> = emptyList(),
-    val selectedTask: ModelTask? = null,
-    val maxParamsBillion: Float? = null,
-    val isGgufOnly: Boolean = false,
-    val activeHardwareProfile: HardwareProfile? = null,
-    val compatibilityMap: Map<String, HardwareCompatibilityResult> = emptyMap(),
-    val errorMessage: String? = null,
+    val isLoadingMore: Boolean = false,
+    val state: UiState<List<RepoItem>> = UiState.Loading
 )
 
 class SearchViewModel(
-    private val modelRepository: ModelRepository,
-    private val hardwareRepository: HardwareRepository
+    private val hubRepository: HubRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SearchUiState())
@@ -44,131 +35,91 @@ class SearchViewModel(
     private var searchJob: Job? = null
 
     init {
-        loadProfileAndPerformSearch()
+        executeSearch()
     }
 
     fun onQueryChanged(newQuery: String) {
-        _uiState.update { it.copy(query = newQuery) }
-        triggerSearchDebounced()
+        _uiState.value = _uiState.value.copy(query = newQuery, page = 1)
+        debouncedSearch()
     }
 
-    fun onTaskFilterSelected(task: ModelTask?) {
-        _uiState.update { it.copy(selectedTask = if (it.selectedTask == task) null else task) }
-        performSearch()
+    fun onTypeChanged(type: RepoType) {
+        _uiState.value = _uiState.value.copy(selectedType = type, page = 1)
+        executeSearch()
     }
 
-    fun onMaxParamsChanged(maxParams: Float?) {
-        _uiState.update { it.copy(maxParamsBillion = maxParams) }
-        performSearch()
+    fun onSortChanged(sort: String) {
+        _uiState.value = _uiState.value.copy(selectedSort = sort, page = 1)
+        executeSearch()
     }
 
-    fun onGgufToggle() {
-        _uiState.update { it.copy(isGgufOnly = !it.isGgufOnly) }
-        performSearch()
+    fun onPipelineTagSelected(pipelineTag: String?) {
+        _uiState.value = _uiState.value.copy(pipelineTagFilter = pipelineTag, page = 1)
+        executeSearch()
     }
 
-    fun retry() {
-        performSearch()
-    }
-
-    private fun triggerSearchDebounced() {
+    private fun debouncedSearch() {
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
-            delay(250.milliseconds) // 250ms debounce
-            performSearch()
+            delay(350)
+            executeSearch()
         }
     }
 
-    fun loadNextPage() {
-        val (query, isLoading, isLoadingMore, currentPage, canLoadMore, searchResults, selectedTask, maxParamsBillion, isGgufOnly, activeHardwareProfile) = _uiState.value
-        if (isLoading || isLoadingMore || !canLoadMore) return
-
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoadingMore = true) }
+    fun executeSearch() {
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
+            val curr = _uiState.value
+            _uiState.value = curr.copy(state = UiState.Loading)
             try {
-                val nextPage = currentPage + 1
-                val newResults = modelRepository.searchModels(
-                    query = query,
-                    selectedTask = selectedTask,
-                    maxParams = maxParamsBillion,
-                    isGgufOnly = isGgufOnly,
-                    page = nextPage
+                val list = hubRepository.searchRepos(
+                    query = curr.query,
+                    type = curr.selectedType,
+                    pipelineTag = curr.pipelineTagFilter,
+                    sort = curr.selectedSort,
+                    page = 1,
+                    limit = 30
                 )
-
-                val existingIds = searchResults.map { it.id }.toSet()
-                val distinctNew = newResults.filter { !existingIds.contains(it.id) }
-                val combined = searchResults + distinctNew
-
-                val profile = activeHardwareProfile ?: hardwareRepository.getActiveProfile()
-                val compMap = if (profile != null) {
-                    combined.associateBy(keySelector = { it.id }) { model ->
-                        HardwareFitCalculator.calculate(model, model.quantizations.firstOrNull(), profile)
-                    }
-                } else {
-                    emptyMap()
-                }
-
-                _uiState.update {
-                    it.copy(
-                        isLoadingMore = false,
-                        currentPage = nextPage,
-                        canLoadMore = newResults.isNotEmpty(),
-                        searchResults = combined,
-                        compatibilityMap = compMap
-                    )
-                }
-            } catch (_: Exception) {
-                _uiState.update { it.copy(isLoadingMore = false, canLoadMore = false) }
+                _uiState.value = _uiState.value.copy(
+                    results = list,
+                    page = 1,
+                    canLoadMore = list.size >= 30,
+                    state = if (list.isEmpty()) UiState.Empty("No ${curr.selectedType.displayName} match your query.") else UiState.Success(list)
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    state = UiState.Error("Failed to search Hugging Face Hub: ${e.message}", e)
+                )
             }
         }
     }
 
-    private fun loadProfileAndPerformSearch() {
-        viewModelScope.launch {
-            val profile = hardwareRepository.getActiveProfile()
-            _uiState.update { it.copy(activeHardwareProfile = profile) }
-            performSearch()
-        }
-    }
+    fun loadNextPage() {
+        val curr = _uiState.value
+        if (curr.isLoadingMore || !curr.canLoadMore) return
 
-    private fun performSearch() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, currentPage = 0, canLoadMore = true, errorMessage = null) }
+            _uiState.value = curr.copy(isLoadingMore = true)
+            val nextPage = curr.page + 1
             try {
-                val state = _uiState.value
-                val results = modelRepository.searchModels(
-                    query = state.query,
-                    selectedTask = state.selectedTask,
-                    maxParams = state.maxParamsBillion,
-                    isGgufOnly = state.isGgufOnly,
-                    page = 0
+                val nextList = hubRepository.searchRepos(
+                    query = curr.query,
+                    type = curr.selectedType,
+                    pipelineTag = curr.pipelineTagFilter,
+                    sort = curr.selectedSort,
+                    page = nextPage,
+                    limit = 30
                 )
-
-                val profile = state.activeHardwareProfile ?: hardwareRepository.getActiveProfile()
-                val compMap = if (profile != null) {
-                    results.associateBy(keySelector = { it.id }) { model ->
-                        HardwareFitCalculator.calculate(model, model.quantizations.firstOrNull(), profile)
-                    }
-                } else {
-                    emptyMap()
-                }
-
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        currentPage = 0,
-                        searchResults = results,
-                        compatibilityMap = compMap
-                    )
-                }
+                val combined = curr.results + nextList
+                _uiState.value = _uiState.value.copy(
+                    results = combined,
+                    page = nextPage,
+                    isLoadingMore = false,
+                    canLoadMore = nextList.size >= 30,
+                    state = UiState.Success(combined)
+                )
             } catch (_: Exception) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        searchResults = emptyList(),
-                        errorMessage = "Unable to search Hugging Face. Please check your network connection."
-                    )
-                }
+                _uiState.value = _uiState.value.copy(isLoadingMore = false)
             }
         }
     }

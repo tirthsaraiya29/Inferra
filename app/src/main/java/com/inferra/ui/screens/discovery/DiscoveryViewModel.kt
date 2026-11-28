@@ -2,92 +2,57 @@ package com.inferra.ui.screens.discovery
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.inferra.data.local.AndroidModelEntity
-import com.inferra.data.repository.ModelRepository
-import com.inferra.domain.model.BenchmarkScoreUiModel
+import com.inferra.data.repository.HubRepository
+import com.inferra.domain.model.RepoItem
+import com.inferra.domain.model.RepoType
 import com.inferra.domain.model.UiState
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.stateIn
-import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.launch
 
-data class CatalogFilterState(
-    val searchQuery: String = "",
-    val minParamsBillion: Int? = null,
-    val maxParamsBillion: Int? = null,
-    val minContextLength: Int? = null,
-    val isOpenWeightsOnly: Boolean? = null,
-    val licenseQuery: String? = null,
-    val sortBy: String = "updated_at",
+data class DiscoveryFeedData(
+    val trendingModels: List<RepoItem> = emptyList(),
+    val popularDatasets: List<RepoItem> = emptyList(),
+    val trendingSpaces: List<RepoItem> = emptyList(),
+    val recentModels: List<RepoItem> = emptyList()
 )
 
 class DiscoveryViewModel(
-    private val modelRepository: ModelRepository,
+    private val hubRepository: HubRepository
 ) : ViewModel() {
 
-    private val _filterState = MutableStateFlow(CatalogFilterState())
-    val filterState: StateFlow<CatalogFilterState> = _filterState.asStateFlow()
+    private val _uiState = MutableStateFlow<UiState<DiscoveryFeedData>>(UiState.Loading)
+    val uiState: StateFlow<UiState<DiscoveryFeedData>> = _uiState.asStateFlow()
 
-    private val topScoresCache = ConcurrentHashMap<String, StateFlow<List<BenchmarkScoreUiModel>>>()
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val catalogUiState: StateFlow<UiState<List<AndroidModelEntity>>> = _filterState
-        .flatMapLatest { (searchQuery, minParamsBillion, maxParamsBillion, minContextLength, isOpenWeightsOnly, licenseQuery, sortBy) ->
-            modelRepository.observeAndroidModels(
-                query = searchQuery,
-                minParams = minParamsBillion,
-                maxParams = maxParamsBillion,
-                minContext = minContextLength,
-                isOpenWeights = isOpenWeightsOnly,
-                license = licenseQuery,
-                sortBy = sortBy,
-            )
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = UiState.Loading,
-        )
-
-    fun onSearchQueryChanged(query: String) {
-        _filterState.value = _filterState.value.copy(searchQuery = query)
+    init {
+        loadDiscoveryFeed()
     }
 
-    fun onParamsRangeChanged(minParams: Int?, maxParams: Int?) {
-        _filterState.value = _filterState.value.copy(
-            minParamsBillion = minParams,
-            maxParamsBillion = maxParams,
-        )
-    }
+    fun loadDiscoveryFeed() {
+        viewModelScope.launch {
+            _uiState.value = UiState.Loading
+            try {
+                val trendingModels = hubRepository.searchRepos(type = RepoType.MODEL, sort = "downloads", limit = 10)
+                val popularDatasets = hubRepository.searchRepos(type = RepoType.DATASET, sort = "downloads", limit = 10)
+                val trendingSpaces = hubRepository.searchRepos(type = RepoType.SPACE, sort = "likes", limit = 10)
+                val recentModels = hubRepository.searchRepos(type = RepoType.MODEL, sort = "lastModified", limit = 10)
 
-    fun onOpenWeightsToggled(isOpenOnly: Boolean?) {
-        _filterState.value = _filterState.value.copy(isOpenWeightsOnly = isOpenOnly)
-    }
-
-    fun onMinContextChanged(minContext: Int?) {
-        _filterState.value = _filterState.value.copy(minContextLength = minContext)
-    }
-
-    fun onSortByChanged(sortBy: String) {
-        _filterState.value = _filterState.value.copy(sortBy = sortBy)
-    }
-
-    fun resetFilters() {
-        _filterState.value = CatalogFilterState()
-    }
-
-    fun getTopScoresForModel(modelId: String): StateFlow<List<BenchmarkScoreUiModel>> {
-        return topScoresCache.getOrPut(modelId) {
-            modelRepository.observeBenchmarkScores(modelId)
-                .stateIn(
-                    scope = viewModelScope,
-                    started = SharingStarted.WhileSubscribed(5000),
-                    initialValue = emptyList(),
+                val feed = DiscoveryFeedData(
+                    trendingModels = trendingModels,
+                    popularDatasets = popularDatasets,
+                    trendingSpaces = trendingSpaces,
+                    recentModels = recentModels
                 )
+
+                _uiState.value = if (trendingModels.isEmpty() && popularDatasets.isEmpty()) {
+                    UiState.Empty("No discovery content available.")
+                } else {
+                    UiState.Success(feed)
+                }
+            } catch (e: Exception) {
+                _uiState.value = UiState.Error("Failed to load Hugging Face discovery feed: ${e.message}", e)
+            }
         }
     }
 }

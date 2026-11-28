@@ -34,11 +34,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.CompareArrows
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Dataset
-import androidx.compose.material.icons.filled.DeveloperBoard
+import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -75,10 +76,11 @@ data class NavItem(
 
 val mainNavItems = listOf(
     NavItem(Screen.Discovery.route, "Discover", Icons.Default.Explore),
+    NavItem(Screen.Models.route, "Models", Icons.Default.Dns),
     NavItem(Screen.Datasets.route, "Datasets", Icons.Default.Dataset),
-    NavItem(Screen.Compare.route, "Compare", Icons.AutoMirrored.Filled.CompareArrows),
-    NavItem(Screen.Hardware.route, "Hardware", Icons.Default.DeveloperBoard),
+    NavItem(Screen.Spaces.route, "Spaces", Icons.Default.Apps),
     NavItem(Screen.Downloads.route, "Downloads", Icons.Default.Download),
+    NavItem(Screen.AccountSettings.route, "Account", Icons.Default.Person)
 )
 
 val searchNavItem = NavItem(Screen.Search.route, "Search", Icons.Default.Search)

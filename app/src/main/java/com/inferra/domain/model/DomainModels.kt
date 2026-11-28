@@ -10,210 +10,138 @@ import kotlinx.serialization.Serializable
 sealed interface UiState<out T> {
     data object Loading : UiState<Nothing>
     data class Success<T>(val data: T) : UiState<T>
-    data class Empty(val reason: EmptyReason) : UiState<Nothing>
+    data class Empty(val message: String = "No results found.") : UiState<Nothing>
     data class Error(
-        val throwable: Throwable? = null,
         val userMessage: String,
+        val throwable: Throwable? = null,
         val canRetry: Boolean = true
     ) : UiState<Nothing>
 }
 
-enum class EmptyReason {
-    NO_RESULTS,
-    NO_BENCHMARKS,
-    NO_COMPARISON_MODELS,
-    CORRUPTED_CACHE
+enum class RepoType(val apiPath: String, val displayName: String) {
+    MODEL("models", "Models"),
+    DATASET("datasets", "Datasets"),
+    SPACE("spaces", "Spaces")
 }
 
 // ==============================================================================
-// Benchmark Score Models
+// Hugging Face Repository Models
 // ==============================================================================
 
-enum class BenchmarkDomainCategory(val displayName: String) {
-    REASONING_SCIENCE("Reasoning & Science"),
-    SOFTWARE_ENGINEERING("Software Engineering"),
-    AGENTS_TOOLS("Agents & Tools"),
-    CONTEXT_MULTIMODAL("Context & Multimodal"),
-    FACTUALITY("Contamination & Factuality"),
-    HUMAN_PREFERENCE("Human Preference"),
-    OTHER("Other")
-}
-
-data class BenchmarkScoreUiModel(
-    val benchmarkId: String,
-    val name: String,
-    val domain: String,
-    val metricName: String,
-    val rawScore: Double?,
-    val normalizedScore: Double?,
-    val measurementType: String,
-    val scoreFormatted: String = rawScore?.let {
-        if (metricName.contains("Elo", ignoreCase = true)) {
-            "%.0f".format(it)
-        } else if (it <= 1.0 && it > 0.0) {
-            "%.1f%%".format(it * 100)
-        } else {
-            "%.1f".format(it)
-        }
-    } ?: "—",
-    val category: BenchmarkDomainCategory = when (domain.uppercase()) {
-        "REASONING", "SCIENCE", "MATHEMATICS", "INSTRUCTION_FOLLOWING" -> BenchmarkDomainCategory.REASONING_SCIENCE
-        "CODING" -> BenchmarkDomainCategory.SOFTWARE_ENGINEERING
-        "AGENTS" -> BenchmarkDomainCategory.AGENTS_TOOLS
-        "LONG_CONTEXT", "MULTIMODAL" -> BenchmarkDomainCategory.CONTEXT_MULTIMODAL
-        "FACTUALITY" -> BenchmarkDomainCategory.FACTUALITY
-        "HUMAN_PREFERENCE" -> BenchmarkDomainCategory.HUMAN_PREFERENCE
-        else -> BenchmarkDomainCategory.OTHER
-    }
-)
-
-// ==============================================================================
-// Hardware Profiles & Devices
-// ==============================================================================
-
-enum class DeviceType {
-    LOCAL_ANDROID,
-    DESKTOP_PC,
-    LAPTOP,
-    WORKSTATION_SERVER
-}
-
-enum class FitGrade {
-    EXCELLENT,      // Comfortably fits in VRAM/RAM with headroom
-    BORDERLINE,     // Fits in combined RAM/VRAM but offloading needed or tight
-    INSUFFICIENT,   // Exceeds available RAM/VRAM
-    UNKNOWN
-}
-
-data class HardwareProfile(
+@Immutable
+@Serializable
+data class RepoItem(
     val id: String,
     val name: String,
-    val deviceType: DeviceType,
-    val cpuName: String,
-    val gpuName: String,
-    val vramGb: Float,
-    val ramGb: Float,
-    val osName: String,
-    val preferredRuntime: String,
-    val availableStorageGb: Float = 500f,
-    val isLocalDevice: Boolean = false
+    val author: String,
+    val type: RepoType,
+    val description: String? = null,
+    val downloads: Long = 0,
+    val likes: Long = 0,
+    val lastModified: String? = null,
+    val createdAt: String? = null,
+    val isPrivate: Boolean = false,
+    val isGated: Boolean = false,
+    val pipelineTag: String? = null,
+    val libraryName: String? = null,
+    val sdk: String? = null,
+    val tags: List<String> = emptyList(),
+    val license: String? = null,
+    val avatarUrl: String? = null
 )
 
-data class HardwareCompatibilityResult(
-    val fitGrade: FitGrade,
-    val requiredVramGb: Float,
-    val requiredRamGb: Float,
-    val estimatedTokensPerSec: Float,
-    val estimatedTtftMs: Float,
-    val offloadPercentage: Int,
-    val explanation: String,
-    val profileName: String
+@Immutable
+@Serializable
+data class LfsInfo(
+    val oid: String? = null,
+    val size: Long? = null,
+    val pointerSize: Long? = null
 )
 
-data class DeviceTarget(
-    val id: String,
+@Immutable
+@Serializable
+data class FileTreeItem(
+    val path: String,
+    val type: String = "file", // "file" or "directory"
+    val size: Long? = null,
+    val lfs: LfsInfo? = null,
+    val sha256: String? = null
+)
+
+@Immutable
+@Serializable
+data class RepoDetail(
+    val repo: RepoItem,
+    val siblings: List<FileTreeItem> = emptyList(),
+    val configSummary: Map<String, String> = emptyMap(),
+    val readmeContent: String? = null,
+    val selectedRevision: String = "main"
+)
+
+// ==============================================================================
+// Users and Organizations
+// ==============================================================================
+
+@Immutable
+@Serializable
+data class UserProfile(
+    val username: String,
+    val fullname: String? = null,
+    val avatarUrl: String? = null,
+    val isOrg: Boolean = false,
+    val bio: String? = null,
+    val isPro: Boolean = false,
+    val email: String? = null
+)
+
+@Immutable
+@Serializable
+data class AuthState(
+    val token: String? = null,
+    val user: UserProfile? = null,
+    val isAuthenticated: Boolean = false,
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null
+)
+
+// ==============================================================================
+// Bookmarks & Downloads
+// ==============================================================================
+
+@Immutable
+@Serializable
+data class Bookmark(
+    val repoId: String,
+    val repoType: RepoType,
     val name: String,
-    val ipAddress: String,
-    val port: Int = 8443,
-    val osName: String,
-    val isOnline: Boolean,
-    val lastSeenEpochMs: Long,
-    val isPaired: Boolean,
-    val supportedRuntimes: List<String>,
+    val author: String,
+    val addedAtEpochMs: Long = System.currentTimeMillis()
 )
-
-// ==============================================================================
-// Downloads & Manifest
-// ==============================================================================
 
 enum class DownloadStatus {
     QUEUED,
     DOWNLOADING,
     PAUSED,
     COMPLETED,
-    FAILED,
-    WAITING_FOR_DEVICE
+    FAILED
 }
 
+@Immutable
 @Serializable
-data class DownloadManifest(
-    val modelId: String,
-    val repository: String,
-    val exactRevision: String,
-    val fileName: String,
-    val expectedSizeBytes: Long,
-    val checksumSha256: String? = null,
-    val sourceUrl: String,
-    val targetDeviceId: String,
-    val requestedFormat: String,
-    val createdAtEpochMs: Long
-)
-
 data class DownloadJob(
     val id: String,
-    val modelId: String,
-    val modelName: String,
-    val author: String,
-    val quantType: String,
-    val totalBytes: Long,
-    val downloadedBytes: Long,
-    val status: DownloadStatus,
-    val targetDeviceId: String,
-    val targetDeviceName: String,
-    val speedBytesPerSec: Long = 0,
-    val etaSeconds: Long = 0,
+    val repoId: String,
+    val repoType: RepoType,
+    val revision: String = "main",
+    val filePath: String,
+    val fileName: String,
+    val totalBytes: Long = 0L,
+    val downloadedBytes: Long = 0L,
+    val status: DownloadStatus = DownloadStatus.QUEUED,
+    val speedBytesPerSec: Long = 0L,
+    val etaSeconds: Long = 0L,
+    val expectedSha256: String? = null,
+    val localPath: String? = null,
     val errorMessage: String? = null,
-    val manifest: DownloadManifest
-)
-
-// ==============================================================================
-// Provider & Deployments
-// ==============================================================================
-
-@Immutable
-@Serializable
-data class Provider(
-    val id: String,
-    val name: String,
-    val logoUrl: String = "",
-    val websiteUrl: String = "",
-    val isSelfHosted: Boolean = false,
-)
-
-@Immutable
-@Serializable
-data class ProviderDeployment(
-    val id: String,
-    val providerId: String,
-    val canonicalId: String,
-    val providerModelId: String,
-    val supportedContextTokens: Int = 131072,
-    val isAvailable: Boolean = true,
-    val region: String = "Global"
-)
-
-@Immutable
-@Serializable
-data class PricingRecord(
-    val id: String,
-    val deploymentId: String,
-    val inputPricePerMToken: Double,
-    val outputPricePerMToken: Double,
-    val cachedInputPricePerMToken: Double? = null,
-    val batchPricePerMToken: Double? = null,
-    val currency: String = "USD",
-    val effectiveDate: String = "",
-    val sourceUrl: String = ""
-)
-
-@Immutable
-@Serializable
-data class ProviderMeasurement(
-    val id: String,
-    val deploymentId: String,
-    val prefillTokensPerSec: Float = 0f,
-    val decodeTokensPerSec: Float = 0f,
-    val ttftMs: Float = 0f,
-    val measuredAtEpochMs: Long = System.currentTimeMillis(),
-    val source: String = "Provider Docs / Independent Benchmark"
+    val createdAtEpochMs: Long = System.currentTimeMillis()
 )

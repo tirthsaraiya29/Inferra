@@ -1,52 +1,35 @@
-name: Daily Model Intelligence Pipeline
+name: Daily Build & Validation Pipeline
 
 on:
   schedule:
-    # Trigger nightly at 02:00 UTC
     - cron: '0 2 * * *'
   workflow_dispatch:
-    inputs:
-      strict_mode:
-        description: 'Enforce strict validation checks'
-        required: false
-        default: 'false'
 
 jobs:
-  ingest-validate-release:
+  build-and-test:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@117234705f102444482f0131998505825d00c9f2 # v4.2.2
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@39cd14951b08e74b059732155557623a5d60eadc # v5.4.0
+      - name: Set up JDK 17
+        uses: actions/setup-java@3a4729f27d49818ab445a6c3821ef9a5f4f8102a # v4.7.0
         with:
-          python-version: '3.11'
-          cache: 'pip'
+          java-version: '17'
+          distribution: 'temurin'
 
-      - name: Install Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+      - name: Grant Execute Permission for Gradlew
+        run: chmod +x gradlew
 
-      - name: Run Database Validation & Pipeline Tests
-        run: |
-          python -m unittest discover -s database -p "*.py" || true
+      - name: Run Unit Tests & Assemble Debug APK
+        run: ./gradlew test assembleDebug --no-daemon
 
-      - name: Execute Inferra Ingestion & Validation
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          INFERRA_LOG_LEVEL: INFO
-          INFERRA_STRICT_VALIDATION: ${{ github.event.inputs.strict_mode == 'true' && '1' || '0' }}
-        run: |
-          python database/inferra_data.py run
-
-      - name: Upload Release Artifacts
+      - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
-          name: inferra-android-release
-          path: app/src/main/assets/inferra_models_v1.sqlite3
+          name: inferra-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 14

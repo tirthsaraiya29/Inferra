@@ -2,8 +2,8 @@ package com.inferra
 
 import com.inferra.data.network.HuggingFaceClient
 import com.inferra.data.network.NetworkToDomainMapper
+import com.inferra.domain.model.RepoType
 import kotlinx.coroutines.runBlocking
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -17,38 +17,34 @@ class HuggingFaceApiTest {
         assertTrue("Expected non-empty model list from HF", dtos.isNotEmpty())
 
         val firstDto = dtos.first()
-        println("First model ID: ${firstDto.id}")
         assertNotNull(firstDto.id)
 
-        val domainModel = NetworkToDomainMapper.mapToDomain(firstDto)
-        println("Mapped model: name=${domainModel.name}, author=${domainModel.author}, params=${domainModel.totalParamsBillion}B")
-        assertNotNull(domainModel.name)
+        val repoItem = NetworkToDomainMapper.mapModelToRepoItem(firstDto)
+        assertTrue(repoItem.type == RepoType.MODEL)
+        assertNotNull(repoItem.name)
     }
 
     @Test
-    fun testGetModelDetailLiveApi() = runBlocking {
-        val modelId = "gpt2"
-        val dto = HuggingFaceClient.api.getModelDetail(id = modelId)
-        println("Fetched model detail for $modelId: id=${dto.id}, downloads=${dto.downloads}")
-        assertNotNull(dto.id)
+    fun testGetDatasetsLiveApi() = runBlocking {
+        val dtos = HuggingFaceClient.api.getDatasets(limit = 10, sort = "downloads")
+        println("Fetched ${dtos.size} datasets from Hugging Face API")
+        assertTrue("Expected non-empty dataset list from HF", dtos.isNotEmpty())
 
-        val domainModel = NetworkToDomainMapper.mapToDomain(dto)
-        println("Mapped detail: name=${domainModel.name}, author=${domainModel.author}, id=${domainModel.id}")
-        assertEquals("gpt2", domainModel.name)
-        assertEquals("openai-community/gpt2", domainModel.id)
+        val firstDto = dtos.first()
+        val repoItem = NetworkToDomainMapper.mapDatasetToRepoItem(firstDto)
+        assertTrue(repoItem.type == RepoType.DATASET)
+        assertNotNull(repoItem.name)
     }
 
     @Test
-    fun testGetModelDetailWithSlashLiveApi() = runBlocking {
-        val modelId = "meta-llama/Llama-3.2-1B"
-        val dto = HuggingFaceClient.api.getModelDetail(id = modelId)
-        println("Fetched model detail for $modelId: id=${dto.id}, downloads=${dto.downloads}")
-        assertNotNull(dto.id)
+    fun testGetSpacesLiveApi() = runBlocking {
+        val dtos = HuggingFaceClient.api.getSpaces(limit = 10, sort = "likes")
+        println("Fetched ${dtos.size} spaces from Hugging Face API")
+        assertTrue("Expected non-empty spaces list from HF", dtos.isNotEmpty())
 
-        val domainModel = NetworkToDomainMapper.mapToDomain(dto)
-        println("Mapped detail: name=${domainModel.name}, author=${domainModel.author}")
-        assertEquals("meta-llama/Llama-3.2-1B", domainModel.id)
-        assertEquals("Llama-3.2-1B", domainModel.name)
-        assertEquals("meta-llama", domainModel.author)
+        val firstDto = dtos.first()
+        val repoItem = NetworkToDomainMapper.mapSpaceToRepoItem(firstDto)
+        assertTrue(repoItem.type == RepoType.SPACE)
+        assertNotNull(repoItem.name)
     }
 }
